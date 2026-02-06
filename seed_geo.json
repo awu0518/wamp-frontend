@@ -1,0 +1,14 @@
+{
+  "countries": [
+    {"name": "United States", "iso_code": "US"},
+    {"name": "Canada", "iso_code": "CA"}
+  ],
+  "states": [
+    {"name": "New York", "state_code": "NY", "capital": "Albany"},
+    {"name": "California", "state_code": "CA", "capital": "Sacramento"}
+  ],
+  "cities": [
+    {"name": "New York", "state_code": "NY"},
+    {"name": "Los Angeles", "state_code": "CA"}
+  ]
+}
