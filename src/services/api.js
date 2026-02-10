@@ -133,3 +133,112 @@ export function bulkUpdateCountries(countries) {
 export function bulkDeleteCountries(countries) {
   return del('/countries/bulk', countries);
 }
+
+// States
+
+// List all states.
+// params: page, limit, sort_by, order, state_code
+export function getStates(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/states${query ? `?${query}` : ''}`);
+}
+
+// Get a single state by ID (name).
+export function getState(stateId) {
+  return get(`/states/${encodeURIComponent(stateId)}`);
+}
+
+// Create a new state.
+export function createState(state) {
+  return post('/states', state);
+}
+
+// Update a state by ID.
+export function updateState(stateId, state) {
+  return put(`/states/${encodeURIComponent(stateId)}`, state);
+}
+
+// Delete a state by ID.
+export function deleteState(stateId) {
+  return del(`/states/${encodeURIComponent(stateId)}`);
+}
+
+// Search states.
+// params: name, state_code, capital
+export function searchStates(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/states/search${query ? `?${query}` : ''}`);
+}
+
+// Bulk create states.
+export function bulkCreateStates(states) {
+  return post('/states/bulk', states);
+}
+
+// Bulk update states.
+export function bulkUpdateStates(states) {
+  return put('/states/bulk', states);
+}
+
+// Bulk delete states.
+export function bulkDeleteStates(states) {
+  return del('/states/bulk', states);
+}
+
+// Cities
+
+// List all cities.
+// params: page, limit, sort_by, order
+export function getCities(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/cities${query ? `?${query}` : ''}`);
+}
+
+// Create a new city.
+export function createCity(city) {
+  return post('/cities', city);
+}
+
+// Delete a city by name.
+// stateCode is a required query param.
+export function deleteCity(cityName, stateCode) {
+  return del(
+    `/cities/${encodeURIComponent(cityName)}?state_code=${encodeURIComponent(stateCode)}`
+  );
+}
+
+// Search cities.
+// params: name (substring), state_code (exact)
+export function searchCities(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/cities/search${query ? `?${query}` : ''}`);
+}
+
+// Bulk create cities.
+export function bulkCreateCities(cities) {
+  return post('/cities/bulk', cities);
+}
+
+// Bulk update cities.
+export function bulkUpdateCities(cities) {
+  return put('/cities/bulk', cities);
+}
+
+// Bulk delete cities.
+export function bulkDeleteCities(cities) {
+  return del('/cities/bulk', cities);
+}
+
+// Auth (placeholder, will implement once backend auth routes are connected)
+
+// Login with email and password. Returns JWT token.
+export async function login(email, password) {
+  return post('/login', { email, password });
+}
+
+// Register a new user.
+export async function register(email, password) {
+  return post('/register', { email, password });
+}
+
+
