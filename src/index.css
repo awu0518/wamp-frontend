@@ -1,66 +1,57 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@theme {
+  --color-ocean-50: #EBF5FB;
+  --color-ocean-100: #D1EAF5;
+  --color-ocean-200: #A3D5EB;
+  --color-ocean-400: #4BA3C7;
+  --color-ocean-600: #2478A0;
+  --color-ocean-800: #14506E;
+  --color-ocean-900: #0B3345;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  --color-sand-50: #FDF8F0;
+  --color-sand-100: #F5EDDE;
+  --color-sand-200: #E8D9C0;
+  --color-sand-300: #D4BF9A;
+  --color-sand-500: #B09468;
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --color-forest-50: #EEF5F0;
+  --color-forest-100: #D4E8D9;
+  --color-forest-400: #5B9E6F;
+  --color-forest-600: #3D7A50;
+  --color-forest-800: #2A5738;
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  --color-earth-400: #A67C52;
+  --color-earth-600: #7A5A3A;
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  --color-coral-400: #D96B5A;
+  --color-coral-600: #B8453A;
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  --font-heading: "Merriweather", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  body {
+    background-color: var(--color-sand-50);
+    color: #2D2B28;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
   }
-  a:hover {
-    color: #747bff;
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    color: var(--color-ocean-900);
   }
-  button {
-    background-color: #f9f9f9;
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 }
