@@ -28,36 +28,43 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto" }}>
-      <h2>Login</h2>
+    <div className="w-full flex justify-center px-4">
+    <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-sand-200 p-8">
+      <h2 className="text-2xl font-bold text-center mb-6">
+        Welcome Back
+      </h2>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "10px" }}>
-          <label>Email</label>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-neutral-800 mb-1.5">
+            Email
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: "100%", padding: "8px" }}
+            className="w-full px-4 py-2.5 rounded-lg border border-sand-200 bg-white placeholder-sand-300 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ocean-200 focus:border-ocean-400 transition-colors"
           />
         </div>
 
-        <div style={{ marginBottom: "10px" }}>
-          <label>Password</label>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-neutral-800 mb-1.5">
+            Password
+          </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: "100%", padding: "8px" }}
+            className="w-full px-4 py-2.5 rounded-lg border border-sand-200 bg-white placeholder-sand-300 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ocean-200 focus:border-ocean-400 transition-colors"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          style={{ width: "100%", padding: "10px" }}
+          className="w-full bg-ocean-600 hover:bg-ocean-800 text-white font-semibold py-2.5 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
@@ -74,6 +81,7 @@ export default function Login() {
           Login successful!
         </p>
       )}
+    </div>
     </div>
   );
 }
