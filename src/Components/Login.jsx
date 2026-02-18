@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "../services/api";
+import { Navigate } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -7,6 +8,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    return <Navigate to="/history" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

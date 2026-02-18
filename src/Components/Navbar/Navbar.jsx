@@ -34,6 +34,16 @@ function Navbar() {
                 {label}
               </NavLink>
             ))}
+            
+            {localStorage.getItem("token") ? (
+              <NavLink to="/history" className={linkClass}>
+                Personal History
+              </NavLink>
+            ) : (
+              <NavLink to="/login" className={linkClass}>
+                Login
+              </NavLink>
+            )}
           </div>
 
           {/* Mobile hamburger button */}
