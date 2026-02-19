@@ -1,9 +1,13 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './Components/Navbar/Navbar'
 import Home from './Components/Home/Home'
 import Login from './Components/Login'
 import StyleGuide from './Components/StyleGuide'
+
+function History() {
+  return <div>Personal History Page</div>
+}
 
 function App() {
   return (
