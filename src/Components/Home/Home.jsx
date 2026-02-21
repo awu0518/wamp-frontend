@@ -74,6 +74,24 @@ function Home() {
           ))}
         </div>
       </div>
+
+      {/* Start Here CTA */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <div className="bg-forest-50 border border-forest-100 rounded-2xl p-6 text-center">
+          <h2 className="text-xl font-semibold text-forest-800 mb-2">
+            Ready to start your journey?
+          </h2>
+          <p className="text-sm text-earth-600/70 mb-4">
+            Create an account and begin documenting your travels today.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block bg-earth-600 hover:bg-earth-400 text-white font-semibold px-8 py-3 rounded-lg transition-colors duration-200 text-base"
+          >
+            Start Here
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }
