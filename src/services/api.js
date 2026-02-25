@@ -237,8 +237,8 @@ export async function login(email, password) {
 }
 
 // Register a new user.
-export async function register(email, password) {
-  return post('/register', { email, password });
+export async function register(email, username, password) {
+  return post('/register', { email, username, password });
 }
 
 

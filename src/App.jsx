@@ -4,6 +4,7 @@ import Navbar from './Components/Navbar/Navbar'
 import Home from './Components/Home/Home'
 import Login from './Components/Login'
 import StyleGuide from './Components/StyleGuide'
+import Register from "./components/Register"
 import Map from './Components/Map/Map'
 
 function History() {
@@ -26,6 +27,7 @@ function App() {
           <Route path='/login' element={<Login />} />
           <Route path='/map' element={<Map />} />
           <Route path='/styleGuide' element={<StyleGuide />} />
+          <Route path="/register" element={<Register />} />
           <Route
             path="/history"
             element={

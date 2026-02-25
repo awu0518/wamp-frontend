@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { login } from "../services/api";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -76,6 +76,17 @@ export default function Login() {
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
+
+        <div className="text-center mt-4">
+          <p className="text-sm test-netural-600">
+            <Link
+             to="/register"
+             className="text-ocean-600 hover:text-ocean-800 font-medium"
+            >
+              Register here
+            </Link>
+          </p>
+        </div>
 
       {error && (
         <p style={{ color: "red", marginTop: "10px" }}>
