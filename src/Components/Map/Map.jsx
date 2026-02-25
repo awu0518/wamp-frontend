@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
+import { useState, useEffect, useMemo } from 'react';
+import { geoEqualEarth, geoAlbersUsa, geoPath } from 'd3-geo';
+import { feature } from 'topojson-client';
 import { getCountries, getStates, searchCities } from '../../services/api';
 
 const WORLD_GEO_URL =
@@ -7,8 +8,17 @@ const WORLD_GEO_URL =
 const US_GEO_URL =
   'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
 
-// ISO 3166-1 numeric → alpha-2 mapping (used to match world-atlas feature IDs
-// against the iso_code values returned by the backend).
+// World map SVG viewport
+const W_W = 800;
+const W_H = 460;
+
+// US map SVG viewport
+const US_W = 960;
+const US_H = 600;
+
+// ISO 3166-1 numeric → alpha-2 mapping.
+// World-atlas encodes each country feature with a numeric id (e.g. 840 = US).
+// We compare these against the iso_code values returned by GET /countries.
 const NUMERIC_TO_ALPHA2 = {
   4:'AF',8:'AL',12:'DZ',20:'AD',24:'AO',28:'AG',31:'AZ',32:'AR',
   36:'AU',40:'AT',44:'BS',48:'BH',50:'BD',51:'AM',52:'BB',56:'BE',
@@ -40,10 +50,61 @@ const NUMERIC_TO_ALPHA2 = {
   858:'UY',860:'UZ',862:'VE',882:'WS',887:'YE',894:'ZM',
 };
 
+// ─── Color tokens (matching index.css design system) ───────────────────────
+const COLOR = {
+  countryIn:     '#2478A0', // ocean-600
+  countryInHov:  '#0B3345', // ocean-900
+  countryUSA:    '#14506E', // ocean-800  (USA stands out to invite click)
+  countryUSAHov: '#0B3345', // ocean-900
+  countryOut:    '#E8D9C0', // sand-200
+  countryOutHov: '#D4BF9A', // sand-300
+  stateIn:       '#3D7A50', // forest-600
+  stateInHov:    '#2A5738', // forest-800
+  stateOut:      '#D4E8D9', // forest-100
+  stateOutHov:   '#B09468', // sand-500
+  stroke:        '#FFFFFF',
+};
+
 export default function Map() {
   const [view, setView] = useState('world');
 
-  // ── Endpoint 1: GET /countries ──────────────────────────────────────────
+  // ── TopoJSON feature arrays (fetched once from CDN) ──────────────────────
+  const [worldFeatures, setWorldFeatures] = useState(null);
+  const [usFeatures, setUsFeatures] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(WORLD_GEO_URL)
+      .then((r) => r.json())
+      .then((topo) => {
+        setWorldFeatures(feature(topo, topo.objects.countries).features);
+      })
+      .finally(() => setGeoLoading(false));
+  }, []);
+
+  const loadUsGeo = () => {
+    if (usFeatures) return;
+    fetch(US_GEO_URL)
+      .then((r) => r.json())
+      .then((topo) => setUsFeatures(feature(topo, topo.objects.states).features));
+  };
+
+  // ── d3-geo projections + path generators (memoized) ──────────────────────
+  const worldPath = useMemo(() => {
+    const proj = geoEqualEarth()
+      .scale(153)
+      .translate([W_W / 2, W_H / 2 + 20]);
+    return geoPath(proj);
+  }, []);
+
+  const usPath = useMemo(() => {
+    if (!usFeatures) return null;
+    const collection = { type: 'FeatureCollection', features: usFeatures };
+    const proj = geoAlbersUsa().fitSize([US_W, US_H], collection);
+    return geoPath(proj);
+  }, [usFeatures]);
+
+  // ── Endpoint 1: GET /countries ───────────────────────────────────────────
   const [countryIsoCodes, setCountryIsoCodes] = useState(new Set());
   const [isoToName, setIsoToName] = useState({});
   const [totalCountries, setTotalCountries] = useState(0);
@@ -51,7 +112,6 @@ export default function Map() {
   const [countriesError, setCountriesError] = useState(null);
 
   useEffect(() => {
-    setCountriesLoading(true);
     getCountries()
       .then((data) => {
         const raw = data.countries || {};
@@ -71,7 +131,7 @@ export default function Map() {
       .finally(() => setCountriesLoading(false));
   }, []);
 
-  // ── Endpoint 2: GET /states ─────────────────────────────────────────────
+  // ── Endpoint 2: GET /states ──────────────────────────────────────────────
   const [stateNames, setStateNames] = useState(new Set());
   const [stateNameToCode, setStateNameToCode] = useState({});
   const [stateCapitals, setStateCapitals] = useState({});
@@ -103,7 +163,7 @@ export default function Map() {
       .finally(() => setStatesLoading(false));
   };
 
-  // ── Endpoint 3: GET /cities/search?state_code=XX ───────────────────────
+  // ── Endpoint 3: GET /cities/search?state_code=XX ─────────────────────────
   const [selectedState, setSelectedState] = useState(null);
   const [cities, setCities] = useState([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
@@ -129,62 +189,57 @@ export default function Map() {
       .finally(() => setCitiesLoading(false));
   };
 
-  // ── Tooltip ─────────────────────────────────────────────────────────────
-  const [tooltip, setTooltip] = useState({
-    visible: false, text: '', x: 0, y: 0,
-  });
+  // ── Tooltip ──────────────────────────────────────────────────────────────
+  const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
 
-  const showTooltip = (text, e) => {
+  const showTooltip = (text, e) =>
     setTooltip({ visible: true, text, x: e.clientX, y: e.clientY });
-  };
-  const moveTooltip = (e) => {
-    setTooltip((prev) =>
-      prev.visible ? { ...prev, x: e.clientX, y: e.clientY } : prev
-    );
-  };
+  const moveTooltip = (e) =>
+    setTooltip((prev) => (prev.visible ? { ...prev, x: e.clientX, y: e.clientY } : prev));
   const hideTooltip = () =>
     setTooltip({ visible: false, text: '', x: 0, y: 0 });
 
-  // ── Country click: US drills into state view ────────────────────────────
+  // ── Hover state (for per-path fill changes without re-fetching) ───────────
+  const [hoveredId, setHoveredId] = useState(null);
+
+  // ── Click handlers ────────────────────────────────────────────────────────
   const handleCountryClick = (geo) => {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
     if (alpha2 === 'US') {
       setView('us');
       loadStates();
+      loadUsGeo();
     }
   };
 
-  // ── State click: load cities sidebar ───────────────────────────────────
   const handleStateClick = (geo) => {
-    const name = geo.properties.name;
-    if (stateNames.has(name)) loadCities(name);
+    if (stateNames.has(geo.properties.name)) loadCities(geo.properties.name);
   };
 
-  // ── Fill helpers ────────────────────────────────────────────────────────
-  const countryFill = (geo) => {
+  // ── Fill helpers ─────────────────────────────────────────────────────────
+  const getCountryFill = (geo) => {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
-    if (!alpha2) return '#E8D9C0';
-    if (alpha2 === 'US' && view === 'world')
-      return countryIsoCodes.has('US') ? '#14506E' : '#E8D9C0';
-    return countryIsoCodes.has(alpha2) ? '#2478A0' : '#E8D9C0';
+    const hovered = hoveredId === geo.id;
+    if (!alpha2) return hovered ? COLOR.countryOutHov : COLOR.countryOut;
+    if (alpha2 === 'US') return hovered ? COLOR.countryUSAHov : COLOR.countryUSA;
+    if (countryIsoCodes.has(alpha2))
+      return hovered ? COLOR.countryInHov : COLOR.countryIn;
+    return hovered ? COLOR.countryOutHov : COLOR.countryOut;
   };
 
-  const countryHover = (geo) => {
-    const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
-    if (!alpha2) return '#D4BF9A';
-    return countryIsoCodes.has(alpha2) ? '#0B3345' : '#D4BF9A';
+  const getStateFill = (geo) => {
+    const inDB = stateNames.has(geo.properties.name);
+    const hovered = hoveredId === geo.id;
+    if (inDB) return hovered ? COLOR.stateInHov : COLOR.stateIn;
+    return hovered ? COLOR.stateOutHov : COLOR.stateOut;
   };
 
-  const stateFill = (geo) =>
-    stateNames.has(geo.properties.name) ? '#3D7A50' : '#D4E8D9';
-
-  const stateHover = (geo) =>
-    stateNames.has(geo.properties.name) ? '#2A5738' : '#B09468';
+  const isLoading = geoLoading || countriesLoading || statesLoading;
 
   return (
     <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 72px)' }}>
 
-      {/* ── Page header ──────────────────────────────────────────────── */}
+      {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="px-6 py-3 border-b border-sand-200 bg-white flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-xl font-bold text-ocean-900">
@@ -196,7 +251,6 @@ export default function Map() {
               : 'Green states exist in the database. Click any green state to see its cities.'}
           </p>
         </div>
-
         {view === 'us' && (
           <button
             onClick={() => { setView('world'); setSelectedState(null); }}
@@ -207,20 +261,20 @@ export default function Map() {
         )}
       </div>
 
-      {/* ── Main area ────────────────────────────────────────────────── */}
+      {/* ── Main area ───────────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
         {/* Map canvas */}
         <div
-          className="flex-1 relative bg-ocean-50"
+          className="flex-1 relative bg-ocean-50 overflow-hidden"
           onMouseMove={moveTooltip}
         >
           {/* Loading overlay */}
-          {(countriesLoading || statesLoading) && (
+          {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-ocean-50/80 z-10">
               <div className="bg-white rounded-xl border border-sand-200 px-5 py-3 shadow-sm">
                 <p className="text-sm text-ocean-600 font-medium">
-                  {countriesLoading ? 'Loading countries…' : 'Loading states…'}
+                  {countriesLoading || geoLoading ? 'Loading countries…' : 'Loading states…'}
                 </p>
               </div>
             </div>
@@ -230,91 +284,92 @@ export default function Map() {
           {countriesError && !countriesLoading && (
             <div className="absolute top-4 left-4 right-4 z-10 flex items-start gap-2 bg-coral-400/10 border border-coral-400/20 rounded-lg p-3">
               <span className="text-coral-600">✕</span>
-              <p className="text-xs text-coral-600">
-                Could not load countries: {countriesError}
-              </p>
+              <p className="text-xs text-coral-600">Could not load countries: {countriesError}</p>
             </div>
           )}
 
-          {/* ── World Map (Endpoint 1) ─────────────────────────────── */}
-          {view === 'world' && (
-            <ComposableMap
-              projectionConfig={{ scale: 147, center: [0, 10] }}
-              style={{ width: '100%', height: '100%' }}
+          {/* ── World SVG map (Endpoint 1) ───────────────────────────── */}
+          {view === 'world' && worldFeatures && (
+            <svg
+              viewBox={`0 0 ${W_W} ${W_H}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={{ width: '100%', height: '100%', display: 'block' }}
             >
-              <Geographies geography={WORLD_GEO_URL}>
-                {({ geographies }) =>
-                  geographies.map((geo) => (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      fill={countryFill(geo)}
-                      stroke="#FFFFFF"
-                      strokeWidth={0.5}
-                      style={{
-                        default: { outline: 'none' },
-                        hover: { fill: countryHover(geo), outline: 'none', cursor: 'pointer' },
-                        pressed: { outline: 'none' },
-                      }}
-                      onMouseEnter={(e) => {
-                        const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
-                        const name = alpha2 ? (isoToName[alpha2] || alpha2) : null;
-                        if (name) showTooltip(
-                          alpha2 === 'US' ? `${name} — click to explore states` : name,
-                          e
-                        );
-                      }}
-                      onMouseLeave={hideTooltip}
-                      onClick={() => handleCountryClick(geo)}
-                    />
-                  ))
-                }
-              </Geographies>
-            </ComposableMap>
+              {/* Ocean background */}
+              <rect width={W_W} height={W_H} fill="#EBF5FB" />
+              {worldFeatures.map((geo) => {
+                const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
+                const inDB = alpha2 && countryIsoCodes.has(alpha2);
+                const isUSA = alpha2 === 'US';
+                return (
+                  <path
+                    key={geo.id}
+                    d={worldPath(geo)}
+                    fill={getCountryFill(geo)}
+                    stroke={COLOR.stroke}
+                    strokeWidth={0.4}
+                    style={{ cursor: (inDB || isUSA) ? 'pointer' : 'default' }}
+                    onMouseEnter={(e) => {
+                      setHoveredId(geo.id);
+                      if (!alpha2) return;
+                      const name = isoToName[alpha2] || alpha2;
+                      showTooltip(
+                        isUSA ? `${name} — click to explore states` : name,
+                        e
+                      );
+                    }}
+                    onMouseLeave={() => { setHoveredId(null); hideTooltip(); }}
+                    onClick={() => handleCountryClick(geo)}
+                  />
+                );
+              })}
+            </svg>
           )}
 
-          {/* ── US States Map (Endpoint 2) ────────────────────────── */}
-          {view === 'us' && (
-            <ComposableMap
-              projection="geoAlbersUsa"
-              projectionConfig={{ scale: 900 }}
-              style={{ width: '100%', height: '100%' }}
+          {/* ── US States SVG map (Endpoint 2) ──────────────────────── */}
+          {view === 'us' && usFeatures && usPath && (
+            <svg
+              viewBox={`0 0 ${US_W} ${US_H}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={{ width: '100%', height: '100%', display: 'block' }}
             >
-              <Geographies geography={US_GEO_URL}>
-                {({ geographies }) =>
-                  geographies.map((geo) => {
-                    const inDB = stateNames.has(geo.properties.name);
-                    return (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        fill={stateFill(geo)}
-                        stroke="#FFFFFF"
-                        strokeWidth={0.8}
-                        style={{
-                          default: { outline: 'none' },
-                          hover: {
-                            fill: stateHover(geo),
-                            outline: 'none',
-                            cursor: inDB ? 'pointer' : 'default',
-                          },
-                          pressed: { outline: 'none' },
-                        }}
-                        onMouseEnter={(e) => {
-                          const capital = stateCapitals[geo.properties.name];
-                          const label = capital
-                            ? `${geo.properties.name} · Capital: ${capital}`
-                            : geo.properties.name;
-                          showTooltip(inDB ? label : `${geo.properties.name} (not in DB)`, e);
-                        }}
-                        onMouseLeave={hideTooltip}
-                        onClick={() => handleStateClick(geo)}
-                      />
-                    );
-                  })
-                }
-              </Geographies>
-            </ComposableMap>
+              <rect width={US_W} height={US_H} fill="#EBF5FB" />
+              {usFeatures.map((geo) => {
+                const inDB = stateNames.has(geo.properties.name);
+                return (
+                  <path
+                    key={geo.id}
+                    d={usPath(geo)}
+                    fill={getStateFill(geo)}
+                    stroke={COLOR.stroke}
+                    strokeWidth={0.8}
+                    style={{ cursor: inDB ? 'pointer' : 'default' }}
+                    onMouseEnter={(e) => {
+                      setHoveredId(geo.id);
+                      const capital = stateCapitals[geo.properties.name];
+                      const label = capital
+                        ? `${geo.properties.name} · Capital: ${capital}`
+                        : geo.properties.name;
+                      showTooltip(
+                        inDB ? label : `${geo.properties.name} (not in DB)`,
+                        e
+                      );
+                    }}
+                    onMouseLeave={() => { setHoveredId(null); hideTooltip(); }}
+                    onClick={() => handleStateClick(geo)}
+                  />
+                );
+              })}
+            </svg>
+          )}
+
+          {/* US loading state (before geo arrives) */}
+          {view === 'us' && (!usFeatures || !usPath) && !statesLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white rounded-xl border border-sand-200 px-5 py-3 shadow-sm">
+                <p className="text-sm text-ocean-600 font-medium">Loading US map…</p>
+              </div>
+            </div>
           )}
 
           {/* Floating tooltip */}
@@ -328,10 +383,9 @@ export default function Map() {
           )}
         </div>
 
-        {/* ── Cities sidebar (Endpoint 3) ──────────────────────────── */}
+        {/* ── Cities sidebar (Endpoint 3) ──────────────────────────────── */}
         {view === 'us' && selectedState && (
           <div className="w-72 border-l border-sand-200 bg-white flex flex-col shrink-0 overflow-hidden">
-            {/* Sidebar header */}
             <div className="p-5 border-b border-sand-200 shrink-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -360,7 +414,6 @@ export default function Map() {
               </div>
             </div>
 
-            {/* Cities list */}
             <div className="flex-1 overflow-y-auto p-5" style={{ minHeight: 0 }}>
               <h4 className="text-sm font-semibold text-neutral-800 mb-3">
                 Cities in database
@@ -413,16 +466,16 @@ export default function Map() {
         )}
       </div>
 
-      {/* ── Legend footer ──────────────────────────────────────────── */}
+      {/* ── Legend footer ──────────────────────────────────────────────── */}
       <div className="px-6 py-2.5 border-t border-sand-200 bg-white flex items-center gap-5 flex-wrap text-xs shrink-0">
         {view === 'world' ? (
           <>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#2478A0' }} />
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.countryIn }} />
               <span className="text-neutral-600">In database ({totalCountries})</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#14506E' }} />
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.countryUSA }} />
               <span className="text-neutral-600">USA — click to drill in</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -436,11 +489,11 @@ export default function Map() {
         ) : (
           <>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#3D7A50' }} />
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.stateIn }} />
               <span className="text-neutral-600">In database ({totalStates})</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: '#D4E8D9' }} />
+              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.stateOut }} />
               <span className="text-neutral-600">Not in database</span>
             </div>
             <span className="ml-auto text-xs bg-forest-50 text-forest-600 px-3 py-1 rounded-full font-medium">

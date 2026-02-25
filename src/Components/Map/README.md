@@ -1,27 +1,27 @@
 # Map Component
 
-An interactive two-level geographic explorer that visualizes the GeoJournal database on a real SVG world map. Built with [`react-simple-maps`](https://www.react-simple-maps.io/).
+An interactive two-level geographic explorer that visualizes the GeoJournal database on a real SVG world map.
+
+Rendered with plain SVG using [`d3-geo`](https://github.com/d3/d3-geo) for map projections and [`topojson-client`](https://github.com/topojson/topojson-client) to decode the map shapes. No third-party React map library is used, so there are no peer dependency conflicts with React 19.
 
 ---
 
 ## What It Does
 
-The Map page lets users visually explore which countries, states, and cities exist in the backend database.
-
 **Level 1 — World Map**
-Every country in the world is rendered as a shape. Countries that exist in the database are highlighted in blue; the rest are gray. Hovering a country shows its name in a tooltip. Clicking **USA** drills into the US States view.
+Every country in the world is rendered as an SVG path shape. Countries that exist in the backend database are highlighted in blue; the rest are gray. USA is shown in a darker blue to invite a click. Hovering shows a tooltip with the country name.
 
 **Level 2 — US States Map**
-All 50 US states are rendered. States that exist in the database are highlighted in green. Hovering shows the state name and its capital city. Clicking any green state opens the Cities sidebar on the right.
+Clicking USA switches to a US map where states in the database are highlighted in green. Hovering shows the state name and capital city.
 
 **Cities Sidebar**
-A panel slides in listing every city in the database for the selected state. Clicking the ✕ closes the panel. The "← World Map" button in the header returns to Level 1.
+Clicking any green state opens a right-side panel that fetches and lists every city in the database for that state. The "← World Map" button returns to Level 1.
 
 ---
 
 ## Backend API Calls
 
-The component calls three separate endpoints from the Flask backend (`src/services/api.js`):
+The component hits three separate endpoints from the Flask backend via `src/services/api.js`:
 
 ### 1. `GET /countries`
 Called on **page load**.
@@ -35,16 +35,14 @@ getCountries().then(data => {
 ```
 
 Used to build:
-- A `Set` of ISO alpha-2 codes (e.g. `"US"`, `"FR"`) for O(1) lookup
-- A `iso_code → name` map for tooltip display
+- A `Set` of ISO alpha-2 codes (`"US"`, `"FR"`, …) for O(1) fill lookup per SVG path
+- An `iso_code → name` map for tooltip display
 - The total country count shown in the legend
-
-Each SVG country shape is colored based on whether its ISO code is in this set.
 
 ---
 
 ### 2. `GET /states`
-Called when the user **clicks USA** on the world map (lazy-loaded once).
+Called when the user **clicks USA** (lazy-loaded once, cached for the session).
 
 ```js
 import { getStates } from '../../services/api';
@@ -55,10 +53,9 @@ getStates().then(data => {
 ```
 
 Used to build:
-- A `Set` of state names (matched against `geo.properties.name` from the US topojson)
-- A `name → state_code` map (used to trigger the cities fetch)
-- A `name → capital` map (displayed in tooltips and the sidebar)
-- The total state count shown in the legend
+- A `Set` of state names matched against `geo.properties.name` from the US TopoJSON
+- A `name → state_code` map to trigger the cities fetch on click
+- A `name → capital` map shown in tooltips and the sidebar header
 
 ---
 
@@ -73,18 +70,20 @@ searchCities({ state_code: 'NY' }).then(data => {
 });
 ```
 
-Results are sorted alphabetically and rendered as a list in the Cities sidebar. Each item shows a "City" badge and the city name.
+Results are sorted alphabetically and rendered as a list in the Cities sidebar.
 
 ---
 
-## Data Flow Summary
+## Data Flow
 
 ```
 Page loads
-  └── GET /countries  →  highlight countries on world map
+  └── fetch world TopoJSON from CDN  (one-time, no auth)
+  └── GET /countries                 →  highlight countries on world map
 
 User clicks USA
-  └── GET /states     →  switch to US map, highlight states
+  └── fetch US states TopoJSON from CDN  (lazy, one-time)
+  └── GET /states                    →  switch to US map, highlight states
 
 User clicks a state
   └── GET /cities/search?state_code=XX  →  populate cities sidebar
@@ -92,18 +91,41 @@ User clicks a state
 
 ---
 
-## Map Data Sources
+## How the Map Rendering Works
 
-The SVG geography shapes are fetched from public CDNs at runtime — no API key required:
+The component does not use any React map library. Instead:
 
-| Map | URL | Format |
+1. **TopoJSON is fetched** from public CDNs at runtime (no API key required):
+
+   | Map | CDN URL |
+   |---|---|
+   | World countries | `cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json` |
+   | US states | `cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json` |
+
+2. **`topojson-client`'s `feature()`** converts the compact TopoJSON format into standard GeoJSON feature arrays.
+
+3. **`d3-geo` projections** convert geographic coordinates (longitude/latitude) into SVG x/y pixel coordinates:
+   - World map: `geoEqualEarth()` — an equal-area projection
+   - US map: `geoAlbersUsa()` — the standard US conic projection with inset Alaska/Hawaii
+
+4. **`geoPath(projection)`** generates the SVG `d` attribute string for each country/state polygon.
+
+5. Each feature is rendered as a plain `<path>` element inside an `<svg viewBox>`. Fill color is determined by whether the feature's ID is in the Set returned by the API.
+
+**Country ID matching:** World-atlas encodes each country with a numeric ISO 3166-1 id (e.g. `840` = USA). A static `NUMERIC_TO_ALPHA2` lookup table maps these to the ISO alpha-2 codes stored in the backend (e.g. `"US"`).
+
+**State name matching:** US-atlas state features include `properties.name` (e.g. `"New York"`) which is matched directly against the state names returned by `GET /states`.
+
+---
+
+## Dependencies
+
+| Package | Role | React peer dep? |
 |---|---|---|
-| World countries | `cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json` | TopoJSON |
-| US states | `cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json` | TopoJSON |
+| `d3-geo` | Map projections and SVG path generation | None |
+| `topojson-client` | Decodes TopoJSON into GeoJSON features | None |
 
-Country features use numeric ISO 3166-1 codes as IDs (e.g. `840` = USA). A static `NUMERIC_TO_ALPHA2` lookup table inside `Map.jsx` maps these to the ISO alpha-2 codes stored in the backend (e.g. `"US"`).
-
-US state features include a `properties.name` field (e.g. `"New York"`) that is matched directly against the state names returned by `GET /states`.
+Neither package has any React peer dependency, so they work with any React version including React 19.
 
 ---
 
