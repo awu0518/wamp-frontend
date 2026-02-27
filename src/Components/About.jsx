@@ -88,20 +88,6 @@ function About() {
           ))}
         </div>
       </div>
-
-      {/* Project Info */}
-      <div className="max-w-3xl mx-auto px-4 pb-10">
-        <div className="bg-forest-50 border border-forest-100 rounded-2xl p-6 text-center">
-          <h2 className="text-xl font-semibold text-forest-800 mb-2">
-            About the Project
-          </h2>
-          <p className="text-sm text-earth-600/70">
-            GeoJournal is built with React and a Flask REST API backed by
-            MongoDB. It was created as a full-stack project to combine
-            geographic data with personal travel journaling.
-          </p>
-        </div>
-      </div>
     </div>
   )
 }
