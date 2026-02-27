@@ -6,6 +6,7 @@ import Login from './Components/Login'
 import StyleGuide from './Components/StyleGuide'
 import Register from "./components/Register"
 import Map from './Components/Map/Map'
+import About from './Components/About'
 
 function History() {
   return <div>Personal History Page</div>
@@ -24,6 +25,7 @@ function App() {
       <div className={isFullBleed ? 'flex-1 flex flex-col' : 'flex-1 flex items-center justify-center'}>
         <Routes>
           <Route path='/' element={<Home />} />
+          <Route path='/about' element={<About />} />
           <Route path='/login' element={<Login />} />
           <Route path='/map' element={<Map />} />
           <Route path='/styleGuide' element={<StyleGuide />} />
