@@ -36,7 +36,8 @@ async function request(path, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.message || `Request failed: ${response.status}`);
+    const msg = data.message || data.error || `Request failed: ${response.status}`;
+    const error = new Error(msg);
     error.status = response.status;
     error.data = data;
     throw error;
@@ -240,6 +241,25 @@ export async function login(email, password) {
 // Register a new user.
 export async function register(email, username, password) {
   return post('/register', { email, username, password });
+}
+
+// Journals
+
+export function getJournals(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/journals${query ? `?${query}` : ''}`);
+}
+
+export function createJournal(data) {
+  return post('/journals', data);
+}
+
+export function updateJournal(journalId, data) {
+  return put(`/journals/${encodeURIComponent(journalId)}`, data);
+}
+
+export function deleteJournal(journalId) {
+  return del(`/journals/${encodeURIComponent(journalId)}`);
 }
 
 

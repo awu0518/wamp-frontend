@@ -54,7 +54,7 @@ const COLOR_GROUPS = [
   },
 ];
 
-function ColorSwatch({ shade, groupName }) {
+function ColorSwatch({ shade }) {
   return (
     <div className="flex flex-col items-center">
       <div

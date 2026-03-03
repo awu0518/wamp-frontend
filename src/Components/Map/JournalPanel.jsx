@@ -1,0 +1,145 @@
+import { useState, useEffect } from 'react';
+import { getJournals } from '../../services/api';
+import JournalForm from './JournalForm';
+
+export default function JournalPanel({ city, stateCode, onClose, onJournalAdded }) {
+  const [result, setResult] = useState({ journals: null, error: null });
+  const [showForm, setShowForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const isLoggedIn = !!localStorage.getItem('token');
+  const loading = isLoggedIn && result.journals === null && !result.error;
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let cancelled = false;
+
+    getJournals({ location_type: 'city' })
+      .then((data) => {
+        if (cancelled) return;
+        const items = (data.journals || []).filter(
+          (j) => j.location_name === city && j.state_code === stateCode,
+        );
+        setResult({ journals: items, error: null, authError: false });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.status === 401) {
+          localStorage.removeItem('token');
+          setResult({ journals: [], error: null, authError: true });
+        } else {
+          setResult({ journals: [], error: err.message, authError: false });
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [city, stateCode, isLoggedIn, refreshKey]);
+
+  const journals = result.journals || [];
+  const error = result.error;
+  const showLoginPrompt = !isLoggedIn || result.authError;
+
+  const handleCreated = () => {
+    setShowForm(false);
+    setRefreshKey((k) => k + 1);
+    if (onJournalAdded) onJournalAdded();
+  };
+
+  return (
+    <div className="w-80 border-l border-sand-200 bg-white flex flex-col shrink-0 overflow-hidden">
+      {/* Header */}
+      <div className="p-5 border-b border-sand-200 shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-xs bg-ocean-100 text-ocean-700 px-2.5 py-1 rounded-full font-medium">
+              Journals
+            </span>
+            <h3 className="text-lg font-bold mt-2 text-ocean-900">{city}</h3>
+            <p className="text-xs text-neutral-400 mt-0.5 font-mono">{stateCode}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-600 transition-colors text-lg leading-none shrink-0 mt-1"
+            aria-label="Close journal panel"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-5" style={{ minHeight: 0 }}>
+        {showLoginPrompt && (
+          <div className="flex items-start gap-2 bg-sand-100 border border-sand-200 rounded-lg p-3">
+            <span className="text-sand-500 text-sm leading-none mt-0.5">ℹ</span>
+            <p className="text-xs text-sand-500">Log in to see and add journal entries.</p>
+          </div>
+        )}
+
+        {!showLoginPrompt && loading && (
+          <div className="flex items-center gap-2 text-sm text-ocean-600">
+            <div className="w-3 h-3 rounded-full border-2 border-ocean-400 border-t-transparent animate-spin" />
+            Loading journals…
+          </div>
+        )}
+
+        {!showLoginPrompt && error && (
+          <div className="flex items-start gap-2 bg-coral-400/10 border border-coral-400/20 rounded-lg p-3">
+            <span className="text-coral-600 text-sm leading-none mt-0.5">✕</span>
+            <p className="text-xs text-coral-600">{error}</p>
+          </div>
+        )}
+
+        {!showLoginPrompt && !loading && !error && journals.length === 0 && !showForm && (
+          <div className="flex items-start gap-2 bg-sand-100 border border-sand-200 rounded-lg p-3">
+            <span className="text-sand-500 text-sm leading-none mt-0.5">ℹ</span>
+            <p className="text-xs text-sand-500">No journal entries for {city} yet.</p>
+          </div>
+        )}
+
+        {/* Journal entries */}
+        {!showLoginPrompt && !loading && journals.length > 0 && (
+          <ul className="space-y-3 mb-4">
+            {journals.map((j) => (
+              <li
+                key={j._id}
+                className="bg-sand-50 border border-sand-200 rounded-lg p-3"
+              >
+                <h5 className="text-sm font-semibold text-neutral-800">{j.title}</h5>
+                {j.visited_at && (
+                  <p className="text-xs text-neutral-400 mt-0.5">{j.visited_at}</p>
+                )}
+                {j.body && (
+                  <p className="text-xs text-neutral-600 mt-1.5 line-clamp-3">{j.body}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Add form (inline) */}
+        {!showLoginPrompt && showForm && (
+          <JournalForm
+            city={city}
+            stateCode={stateCode}
+            onSuccess={handleCreated}
+            onCancel={() => setShowForm(false)}
+          />
+        )}
+      </div>
+
+      {/* Footer action */}
+      {!showLoginPrompt && !showForm && (
+        <div className="p-4 border-t border-sand-200 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full bg-ocean-600 hover:bg-ocean-800 text-white font-semibold py-2 rounded-lg transition-colors duration-200 text-sm"
+          >
+            + Add Journal
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
