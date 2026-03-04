@@ -6,11 +6,12 @@ const NAV_LINKS = [
   { to: "/about", label: "About" },
   { to: "/map", label: "Map" },
   { to: "/leaderboard", label: "Leader Board" },
-  { to: "/history", label: "Person History" },
 ];
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
 
   const linkClass = ({ isActive }) =>
     `text-sm font-medium transition-colors ${
@@ -75,6 +76,23 @@ function Navbar() {
                 {label}
               </NavLink>
             ))}
+            {isLoggedIn ? (
+              <NavLink
+                to="/history"
+                onClick={() => setMenuOpen(false)}
+                className={linkClass}
+              >
+                Personal History
+              </NavLink>
+            ) : ( 
+              <NavLink
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className={linkClass}
+              >
+                Login
+              </NavLink>
+            )}
           </div>
         )}
       </nav>

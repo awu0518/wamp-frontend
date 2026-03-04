@@ -4,13 +4,14 @@ import Navbar from './Components/Navbar/Navbar'
 import Home from './Components/Home/Home'
 import Login from './Components/Login'
 import StyleGuide from './Components/StyleGuide'
-import Register from "./components/Register"
+import Register from './Components/Register'
 import Map from './Components/Map/Map'
 import About from './Components/About'
+import History from './Components/History'
 
-function History() {
-  return <div>Personal History Page</div>
-}
+// function History() {
+// return <div>Personal History Page</div>
+// }
 
 // Pages that need the full viewport (no flex centering applied by the shell)
 const FULL_BLEED_ROUTES = ['/map'];
