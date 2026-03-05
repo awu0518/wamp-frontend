@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
@@ -11,7 +11,15 @@ const NAV_LINKS = [
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const navigate = useNavigate();
+
   const isLoggedIn = Boolean(localStorage.getItem("token"));
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setMenuOpen(false);
+    navigate("/login");
+  };
 
   const linkClass = ({ isActive }) =>
     `text-sm font-medium transition-colors ${
@@ -36,14 +44,23 @@ function Navbar() {
               </NavLink>
             ))}
             
-            {localStorage.getItem("token") ? (
+            {isLoggedIn ? (
+            <>
               <NavLink to="/history" className={linkClass}>
                 Personal History
               </NavLink>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-sm font-medium text-ocean-100 hover:text-white"
+            >
+              Logout
+              </button>
+            </>
             ) : (
               <NavLink to="/login" className={linkClass}>
                 Login
-              </NavLink>
+              </NavLink>            
             )}
           </div>
 
@@ -77,6 +94,7 @@ function Navbar() {
               </NavLink>
             ))}
             {isLoggedIn ? (
+             <> 
               <NavLink
                 to="/history"
                 onClick={() => setMenuOpen(false)}
@@ -84,6 +102,14 @@ function Navbar() {
               >
                 Personal History
               </NavLink>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-left text-sm font-medium text-ocean-100 hover:text-white"
+              >
+                Logout
+              </button>
+              </>
             ) : ( 
               <NavLink
                 to="/login"

@@ -15,7 +15,11 @@ const BASE_URL =
 // Core request function. Attaches JSON headers and auth token (if present).
 // Returns parsed JSON on success; throws on HTTP errors.
 async function request(path, options = {}) {
-  const token = localStorage.getItem('token');
+  // const token = localStorage.getItem('token');
+
+  const tokenRaw = localStorage.getItem("token");
+  const token =
+    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
 
   const headers = {
     'Content-Type': 'application/json',

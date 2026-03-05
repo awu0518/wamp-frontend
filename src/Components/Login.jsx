@@ -9,7 +9,12 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   
-  const token = localStorage.getItem("token");
+//  const token = localStorage.getItem("token");
+
+  const tokenRaw = localStorage.getItem("token");
+  const token =
+    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
+
 
   if (token) {
     return <Navigate to="/history" replace />;

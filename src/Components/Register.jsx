@@ -9,7 +9,11 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem("token");
+  // const token = localStorage.getItem("token");
+
+  const tokenRaw = localStorage.getItem("token");
+  const token =
+    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
 
   if (token) {
     return <Navigate to="/history" replace />;
