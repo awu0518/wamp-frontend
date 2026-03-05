@@ -168,7 +168,7 @@ export default function Map() {
       .catch((err) => {
         if (err.status === 401) localStorage.removeItem('token');
       });
-  }, []);
+  }, [setJournalCounts]);
 
   useEffect(() => {
     refreshJournalCounts();
