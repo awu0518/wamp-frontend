@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { getJournals, deleteJournal } from "../services/api"; // adjust path if needed
+import { getJournals, deleteJournal, updateJournal } from "../services/api"; 
 
 export default function History() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editVisitDate, setEditVisitDate] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);   
 
   // UI state
   const [q, setQ] = useState("");
@@ -67,6 +72,50 @@ export default function History() {
       setItems((prev) => prev.filter((x) => (x._id ?? x.id) !== journalId));
     } catch (e) {
       alert(e.message || "Delete failed");
+    }
+  }
+
+  function startEdit(j) {
+    const id = j._id ?? j.id;
+    setEditingId(id);
+    setEditTitle(j.title ?? "");
+    setEditNotes(j.notes ?? "");
+    const rawDate = j.visit_date ?? j.date ?? "";
+    setEditVisitDate(typeof rawDate === "string" ? rawDate.slice(0, 10) : "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle("");
+    setEditNotes("");
+    setEditVisitDate("");
+  }
+
+  async function saveEdit(id) {
+    setSavingEdit(true);
+    try {
+      const payload = {
+        title: editTitle.trim() || undefined,
+      };
+
+      const updated = await updateJournal(id, payload);
+
+      // backend might return updated object or wrapper; fall back to payload merge
+      const updatedObj = updated?.journal ?? updated ?? null;
+
+      setItems((prev) =>
+        prev.map((x) => {
+          const xid = x._id ?? x.id;
+          if (xid !== id) return x;
+          return updatedObj ? updatedObj : { ...x, ...payload };
+        })
+      );
+
+      cancelEdit();
+    } catch (e) {
+      alert(e.message || "Update failed");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -140,18 +189,89 @@ export default function History() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onDelete(id)}
-                    className="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    {editingId === id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => saveEdit(id)}
+                          disabled={savingEdit || !editNotes.trim()}
+                          className="text-sm px-3 py-2 rounded-lg bg-ocean-600 hover:bg-ocean-800 text-white disabled:opacity-50"
+                        >
+                          {savingEdit ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="text-sm px-3 py-2 rounded-lg border border-sand-200 text-neutral-700 hover:bg-sand-50"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(j)}
+                          className="text-sm px-3 py-2 rounded-lg border border-sand-200 text-neutral-700 hover:bg-sand-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(id)}
+                          className="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                {j.notes && (
-                  <p className="mt-3 text-neutral-800 whitespace-pre-wrap">
-                    {j.notes}
-                  </p>
+                {editingId === id ? (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-800 mb-1">
+                        Title
+                      </label>
+                      <input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-sand-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-800 mb-1">
+                        Visit date
+                      </label>
+                      <input
+                        type="date"
+                        value={editVisitDate}
+                        onChange={(e) => setEditVisitDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-sand-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-800 mb-1">
+                        Notes
+                      </label>
+                      <textarea
+                        value={editNotes}
+                        onChange={(e) => setEditNotes(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 rounded-lg border border-sand-200"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  j.notes && (
+                    <p className="mt-3 text-neutral-800 whitespace-pre-wrap">
+                      {j.notes}
+                    </p>
+                  )
                 )}
               </div>
             );
