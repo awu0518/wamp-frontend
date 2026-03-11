@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { getJournals } from '../../services/api';
+import { getJournals, deleteJournal } from '../../services/api';
 import JournalForm from './JournalForm';
 
 export default function JournalPanel({ city, stateCode, onClose, onJournalAdded }) {
   const [result, setResult] = useState({ journals: null, error: null });
   const [showForm, setShowForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const isLoggedIn = !!localStorage.getItem('token');
   const loading = isLoggedIn && result.journals === null && !result.error;
@@ -43,6 +45,23 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
     setShowForm(false);
     setRefreshKey((k) => k + 1);
     if (onJournalAdded) onJournalAdded();
+  };
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      await deleteJournal(id);
+      setResult((prev) => ({
+        ...prev,
+        journals: (prev.journals || []).filter((j) => j._id !== id),
+      }));
+      if (onJournalAdded) onJournalAdded();
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete journal');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -90,6 +109,13 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
           </div>
         )}
 
+        {deleteError && (
+          <div className="flex items-start gap-2 bg-coral-400/10 border border-coral-400/20 rounded-lg p-3 mb-3">
+            <span className="text-coral-600 text-sm leading-none mt-0.5">✕</span>
+            <p className="text-xs text-coral-600">{deleteError}</p>
+          </div>
+        )}
+
         {!showLoginPrompt && !loading && !error && journals.length === 0 && !showForm && (
           <div className="flex items-start gap-2 bg-sand-100 border border-sand-200 rounded-lg p-3">
             <span className="text-sand-500 text-sm leading-none mt-0.5">ℹ</span>
@@ -105,7 +131,20 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
                 key={j._id}
                 className="bg-sand-50 border border-sand-200 rounded-lg p-3"
               >
-                <h5 className="text-sm font-semibold text-neutral-800">{j.title}</h5>
+                <div className="flex items-start justify-between gap-2">
+                  <h5 className="text-sm font-semibold text-neutral-800 flex-1 min-w-0">
+                    {j.title}
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(j._id)}
+                    disabled={deletingId === j._id}
+                    aria-label={`Delete journal ${j.title}`}
+                    className="text-neutral-300 hover:text-coral-500 transition-colors text-sm leading-none shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {deletingId === j._id ? '…' : '✕'}
+                  </button>
+                </div>
                 {j.visited_at && (
                   <p className="text-xs text-neutral-400 mt-0.5">{j.visited_at}</p>
                 )}

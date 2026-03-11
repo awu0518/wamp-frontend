@@ -6,9 +6,10 @@ import JournalPanel from './JournalPanel'
 vi.mock('../../services/api', () => ({
   getJournals: vi.fn(),
   createJournal: vi.fn(),
+  deleteJournal: vi.fn(),
 }))
 
-import { getJournals } from '../../services/api'
+import { getJournals, deleteJournal } from '../../services/api'
 
 const defaultProps = {
   city: 'Austin',
@@ -105,5 +106,52 @@ describe('JournalPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ Add Journal' }))
 
     expect(screen.getByText('New Journal Entry')).toBeInTheDocument()
+  })
+
+  it('removes a journal entry from the list after successful delete', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({
+      journals: [
+        { _id: 'j1', title: 'SXSW Weekend', location_name: 'Austin', state_code: 'TX' },
+        { _id: 'j2', title: 'ACL Fest', location_name: 'Austin', state_code: 'TX' },
+      ],
+    })
+    deleteJournal.mockResolvedValueOnce(null)
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByLabelText('Delete journal SXSW Weekend'))
+
+    await waitFor(() =>
+      expect(screen.queryByText('SXSW Weekend')).not.toBeInTheDocument()
+    )
+    expect(screen.getByText('ACL Fest')).toBeInTheDocument()
+  })
+
+  it('shows a delete error message when the delete API call fails', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({
+      journals: [
+        { _id: 'j1', title: 'SXSW Weekend', location_name: 'Austin', state_code: 'TX' },
+      ],
+    })
+    deleteJournal.mockRejectedValueOnce({ message: 'Delete failed' })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByLabelText('Delete journal SXSW Weekend'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Delete failed')).toBeInTheDocument()
+    )
+    expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
   })
 })
