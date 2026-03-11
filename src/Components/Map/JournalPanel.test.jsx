@@ -1,0 +1,109 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import '@testing-library/jest-dom'
+import JournalPanel from './JournalPanel'
+
+vi.mock('../../services/api', () => ({
+  getJournals: vi.fn(),
+  createJournal: vi.fn(),
+}))
+
+import { getJournals } from '../../services/api'
+
+const defaultProps = {
+  city: 'Austin',
+  stateCode: 'TX',
+  onClose: vi.fn(),
+  onJournalAdded: vi.fn(),
+}
+
+describe('JournalPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('shows a login prompt when no auth token is present', () => {
+    render(<JournalPanel {...defaultProps} />)
+
+    expect(
+      screen.getByText(/Log in to see and add journal entries/i)
+    ).toBeInTheDocument()
+  })
+
+  it('renders the city name and state code in the header', () => {
+    render(<JournalPanel {...defaultProps} />)
+
+    expect(screen.getByText('Austin')).toBeInTheDocument()
+    expect(screen.getByText('TX')).toBeInTheDocument()
+  })
+
+  it('calls onClose when the close button is clicked', () => {
+    const onClose = vi.fn()
+    render(<JournalPanel {...defaultProps} onClose={onClose} />)
+
+    fireEvent.click(screen.getByLabelText('Close journal panel'))
+
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('shows journal entries and Add Journal button when logged in', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({
+      journals: [
+        {
+          _id: 'j1',
+          title: 'SXSW Weekend',
+          location_name: 'Austin',
+          state_code: 'TX',
+        },
+      ],
+    })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
+    )
+    expect(screen.getByRole('button', { name: '+ Add Journal' })).toBeInTheDocument()
+  })
+
+  it('shows an empty-state message when logged in but no journals exist for the city', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({ journals: [] })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(`No journal entries for Austin yet.`)
+      ).toBeInTheDocument()
+    )
+  })
+
+  it('shows an error message when the API call fails', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockRejectedValueOnce({ message: 'Could not load journals' })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('Could not load journals')).toBeInTheDocument()
+    )
+  })
+
+  it('reveals the JournalForm when Add Journal is clicked', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({ journals: [] })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '+ Add Journal' })).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add Journal' }))
+
+    expect(screen.getByText('New Journal Entry')).toBeInTheDocument()
+  })
+})
