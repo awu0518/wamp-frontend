@@ -53,6 +53,9 @@ export default function Register() {
               required
               className="w-full px-4 py-2.5 rounded-lg border border-sand-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ocean-200 focus:border-ocean-400 transition-colors"
             />
+            <p className="mt-1 text-xs text-neutral-500">
+              Must be 3 to 30 characters.
+            </p>
           </div>
 
           <div className="mb-4">
@@ -79,6 +82,9 @@ export default function Register() {
               required
               className="w-full px-4 py-2.5 rounded-lg border border-sand-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ocean-200 focus:border-ocean-400 transition-colors"
             />
+            <p className="mt-1 text-xs text-neutral-500">
+              At least 8 characters, including 1 uppercase letter.
+            </p>
           </div>
 
           <button
