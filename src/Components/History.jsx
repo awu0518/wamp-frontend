@@ -19,10 +19,8 @@ export default function History() {
     setLoading(true);
     setError(null);
     try {
-      // If your backend supports query params, pass them here
       const data = await getJournals();
-      // data might be { journals: [...] } or [...]
-      const journals = Array.isArray(data) ? data : (data.journals ?? data.items ?? []);
+      const journals = data.journals ?? [];
       setItems(journals);
     } catch (e) {
       setError(e.message || "Failed to load history");
@@ -57,8 +55,8 @@ export default function History() {
     }
 
     out = [...out].sort((a, b) => {
-      const da = new Date(a.visit_date ?? a.date ?? a.created_at ?? 0).getTime();
-      const db = new Date(b.visit_date ?? b.date ?? b.created_at ?? 0).getTime();
+      const da = new Date(a.visited_at ?? a.visit_date ?? a.date ?? a.created_at ?? 0).getTime();
+      const db = new Date(b.visited_at ?? b.visit_date ?? b.date ?? b.created_at ?? 0).getTime();
       return sort === "date_asc" ? da - db : db - da;
     });
 
@@ -76,12 +74,12 @@ export default function History() {
   }
 
   function startEdit(j) {
-    const id = j._id ?? j.id;
+    const id = j._id;
     setEditingId(id);
     setEditTitle(j.title ?? "");
-    setEditNotes(j.notes ?? "");
-    const rawDate = j.visit_date ?? j.date ?? "";
-    setEditVisitDate(typeof rawDate === "string" ? rawDate.slice(0, 10) : "");
+    setEditNotes(j.body ?? "");
+    const rawDate = j.visited_at ?? j.visit_date ?? j.date ?? "";
+    setEditVisitDate((j.visited_at ?? "").slice(0, 10));
   }
 
   function cancelEdit() {
@@ -96,20 +94,14 @@ export default function History() {
     try {
       const payload = {
         title: editTitle.trim() || undefined,
+        body: editNotes.trim(),
+        visited_at: editVisitDate || undefined,
       };
 
-      const updated = await updateJournal(id, payload);
+      await updateJournal(id, payload);
 
-      // backend might return updated object or wrapper; fall back to payload merge
-      const updatedObj = updated?.journal ?? updated ?? null;
-
-      setItems((prev) =>
-        prev.map((x) => {
-          const xid = x._id ?? x.id;
-          if (xid !== id) return x;
-          return updatedObj ? updatedObj : { ...x, ...payload };
-        })
-      );
+      await load();
+      setEditingId(null);
 
       cancelEdit();
     } catch (e) {
@@ -170,8 +162,8 @@ export default function History() {
       ) : (
         <div className="mt-6 space-y-3">
           {filtered.map((j) => {
-            const id = j._id ?? j.id;
-            const when = j.visit_date ?? j.date ?? j.created_at;
+            const id = j._id;
+            const when = j.visited_at ?? j.visit_date ?? j.date ?? j.created_at;
             const title = j.title ?? j.location_name ?? "Journal Entry";
             const loc = [j.city, j.state, j.country].filter(Boolean).join(", ");
 
@@ -267,9 +259,9 @@ export default function History() {
                     </div>
                   </div>
                 ) : (
-                  j.notes && (
+                  (j.body ?? j.notes) && (
                     <p className="mt-3 text-neutral-800 whitespace-pre-wrap">
-                      {j.notes}
+                      {j.body ?? j.notes}
                     </p>
                   )
                 )}
