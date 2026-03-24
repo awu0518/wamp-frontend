@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { createJournal } from '../../services/api';
+import { createJournal, updateJournal } from '../../services/api';
 
-export default function JournalForm({ city, stateCode, onSuccess, onCancel }) {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [visitedAt, setVisitedAt] = useState('');
+export default function JournalForm({ city, stateCode, onSuccess, onCancel, journal }) {
+  const isEdit = !!journal;
+  const [title, setTitle] = useState(journal?.title ?? '');
+  const [body, setBody] = useState(journal?.body ?? '');
+  const [visitedAt, setVisitedAt] = useState(journal?.visited_at ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -14,18 +15,26 @@ export default function JournalForm({ city, stateCode, onSuccess, onCancel }) {
     setError(null);
 
     try {
-      await createJournal({
-        title: title.trim(),
-        body: body.trim(),
-        location_type: 'city',
-        location_name: city,
-        state_code: stateCode,
-        iso_code: 'US',
-        ...(visitedAt && { visited_at: visitedAt }),
-      });
+      if (isEdit) {
+        await updateJournal(journal._id, {
+          title: title.trim(),
+          body: body.trim(),
+          ...(visitedAt && { visited_at: visitedAt }),
+        });
+      } else {
+        await createJournal({
+          title: title.trim(),
+          body: body.trim(),
+          location_type: 'city',
+          location_name: city,
+          state_code: stateCode,
+          iso_code: 'US',
+          ...(visitedAt && { visited_at: visitedAt }),
+        });
+      }
       onSuccess();
     } catch (err) {
-      setError(err.data?.error || err.message || 'Failed to create journal');
+      setError(err.data?.error || err.message || `Failed to ${isEdit ? 'update' : 'create'} journal`);
     } finally {
       setLoading(false);
     }
@@ -33,7 +42,9 @@ export default function JournalForm({ city, stateCode, onSuccess, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <h5 className="text-sm font-semibold text-ocean-900">New Journal Entry</h5>
+      <h5 className="text-sm font-semibold text-ocean-900">
+        {isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}
+      </h5>
 
       <div>
         <label className="block text-xs font-medium text-neutral-700 mb-1">Title *</label>
@@ -83,7 +94,7 @@ export default function JournalForm({ city, stateCode, onSuccess, onCancel }) {
           disabled={loading || !title.trim()}
           className="flex-1 bg-ocean-600 hover:bg-ocean-800 text-white font-semibold py-2 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Saving…' : 'Save'}
+          {loading ? (isEdit ? 'Updating…' : 'Saving…') : (isEdit ? 'Update' : 'Save')}
         </button>
         <button
           type="button"

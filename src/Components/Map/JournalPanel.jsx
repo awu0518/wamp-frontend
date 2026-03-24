@@ -8,6 +8,7 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
   const [refreshKey, setRefreshKey] = useState(0);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [editingJournal, setEditingJournal] = useState(null);
 
   const isLoggedIn = !!localStorage.getItem('token');
   const loading = isLoggedIn && result.journals === null && !result.error;
@@ -45,6 +46,11 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
     setShowForm(false);
     setRefreshKey((k) => k + 1);
     if (onJournalAdded) onJournalAdded();
+  };
+
+  const handleEdited = () => {
+    setEditingJournal(null);
+    setRefreshKey((k) => k + 1);
   };
 
   const handleDelete = async (id) => {
@@ -131,25 +137,48 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
                 key={j._id}
                 className="bg-sand-50 border border-sand-200 rounded-lg p-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <h5 className="text-sm font-semibold text-neutral-800 flex-1 min-w-0">
-                    {j.title}
-                  </h5>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(j._id)}
-                    disabled={deletingId === j._id}
-                    aria-label={`Delete journal ${j.title}`}
-                    className="text-neutral-300 hover:text-coral-500 transition-colors text-sm leading-none shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {deletingId === j._id ? '…' : '✕'}
-                  </button>
-                </div>
-                {j.visited_at && (
-                  <p className="text-xs text-neutral-400 mt-0.5">{j.visited_at}</p>
-                )}
-                {j.body && (
-                  <p className="text-xs text-neutral-600 mt-1.5 line-clamp-3">{j.body}</p>
+                {editingJournal?._id === j._id ? (
+                  <JournalForm
+                    city={city}
+                    stateCode={stateCode}
+                    journal={j}
+                    onSuccess={handleEdited}
+                    onCancel={() => setEditingJournal(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between gap-2">
+                      <h5 className="text-sm font-semibold text-neutral-800 flex-1 min-w-0">
+                        {j.title}
+                      </h5>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingJournal(j); setShowForm(false); }}
+                          disabled={!!deletingId}
+                          aria-label={`Edit journal ${j.title}`}
+                          className="text-neutral-300 hover:text-ocean-500 transition-colors text-sm leading-none disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(j._id)}
+                          disabled={deletingId === j._id}
+                          aria-label={`Delete journal ${j.title}`}
+                          className="text-neutral-300 hover:text-coral-500 transition-colors text-sm leading-none disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {deletingId === j._id ? '…' : '✕'}
+                        </button>
+                      </div>
+                    </div>
+                    {j.visited_at && (
+                      <p className="text-xs text-neutral-400 mt-0.5">{j.visited_at}</p>
+                    )}
+                    {j.body && (
+                      <p className="text-xs text-neutral-600 mt-1.5 line-clamp-3">{j.body}</p>
+                    )}
+                  </>
                 )}
               </li>
             ))}
@@ -168,7 +197,7 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
       </div>
 
       {/* Footer action */}
-      {!showLoginPrompt && !showForm && (
+      {!showLoginPrompt && !showForm && !editingJournal && (
         <div className="p-4 border-t border-sand-200 shrink-0">
           <button
             type="button"
