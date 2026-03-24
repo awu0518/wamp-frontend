@@ -5,9 +5,10 @@ import JournalForm from './JournalForm'
 
 vi.mock('../../services/api', () => ({
   createJournal: vi.fn(),
+  updateJournal: vi.fn(),
 }))
 
-import { createJournal } from '../../services/api'
+import { createJournal, updateJournal } from '../../services/api'
 
 const defaultProps = {
   city: 'New York',
@@ -96,5 +97,77 @@ describe('JournalForm', () => {
     )
 
     await waitFor(() => { resolve({}) })
+  })
+})
+
+describe('JournalForm — edit mode', () => {
+  const existingJournal = {
+    _id: 'j1',
+    title: 'Old Title',
+    body: 'Old notes',
+    visited_at: '2025-06-01',
+  }
+
+  const editProps = {
+    city: 'New York',
+    stateCode: 'NY',
+    journal: existingJournal,
+    onSuccess: vi.fn(),
+    onCancel: vi.fn(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows "Edit Journal Entry" heading and pre-fills all fields', () => {
+    render(<JournalForm {...editProps} />)
+
+    expect(screen.getByText('Edit Journal Entry')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Old Title')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Old notes')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2025-06-01')).toBeInTheDocument()
+  })
+
+  it('shows an "Update" button instead of "Save"', () => {
+    render(<JournalForm {...editProps} />)
+
+    expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+  })
+
+  it('calls updateJournal (not createJournal) on submit', async () => {
+    updateJournal.mockResolvedValueOnce({})
+    render(<JournalForm {...editProps} />)
+
+    fireEvent.change(screen.getByDisplayValue('Old Title'), {
+      target: { value: 'Updated Title' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+
+    await waitFor(() => {
+      expect(updateJournal).toHaveBeenCalledWith('j1', expect.objectContaining({ title: 'Updated Title' }))
+      expect(createJournal).not.toHaveBeenCalled()
+    })
+  })
+
+  it('calls onSuccess after a successful update', async () => {
+    updateJournal.mockResolvedValueOnce({})
+    render(<JournalForm {...editProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+
+    await waitFor(() => expect(editProps.onSuccess).toHaveBeenCalledOnce())
+  })
+
+  it('shows an error message when the update API call fails', async () => {
+    updateJournal.mockRejectedValueOnce({ message: 'Update failed' })
+    render(<JournalForm {...editProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('Update failed')).toBeInTheDocument()
+    )
   })
 })

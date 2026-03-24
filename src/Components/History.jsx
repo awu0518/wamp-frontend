@@ -78,7 +78,6 @@ export default function History() {
     setEditingId(id);
     setEditTitle(j.title ?? "");
     setEditNotes(j.body ?? "");
-    const rawDate = j.visited_at ?? j.visit_date ?? j.date ?? "";
     setEditVisitDate((j.visited_at ?? "").slice(0, 10));
   }
 

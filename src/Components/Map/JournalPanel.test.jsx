@@ -6,10 +6,11 @@ import JournalPanel from './JournalPanel'
 vi.mock('../../services/api', () => ({
   getJournals: vi.fn(),
   createJournal: vi.fn(),
+  updateJournal: vi.fn(),
   deleteJournal: vi.fn(),
 }))
 
-import { getJournals, deleteJournal } from '../../services/api'
+import { getJournals, updateJournal, deleteJournal } from '../../services/api'
 
 const defaultProps = {
   city: 'Austin',
@@ -130,6 +131,62 @@ describe('JournalPanel', () => {
       expect(screen.queryByText('SXSW Weekend')).not.toBeInTheDocument()
     )
     expect(screen.getByText('ACL Fest')).toBeInTheDocument()
+  })
+
+  it('shows the edit form inline when the edit button is clicked', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals.mockResolvedValueOnce({
+      journals: [
+        { _id: 'j1', title: 'SXSW Weekend', body: 'Great time', location_name: 'Austin', state_code: 'TX' },
+      ],
+    })
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByLabelText('Edit journal SXSW Weekend'))
+
+    expect(screen.getByText('Edit Journal Entry')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('SXSW Weekend')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Great time')).toBeInTheDocument()
+  })
+
+  it('closes the edit form and re-fetches after a successful update', async () => {
+    localStorage.setItem('token', 'fake-token')
+    getJournals
+      .mockResolvedValueOnce({
+        journals: [
+          { _id: 'j1', title: 'SXSW Weekend', location_name: 'Austin', state_code: 'TX' },
+        ],
+      })
+      .mockResolvedValueOnce({
+        journals: [
+          { _id: 'j1', title: 'SXSW Weekend (edited)', location_name: 'Austin', state_code: 'TX' },
+        ],
+      })
+    updateJournal.mockResolvedValueOnce({})
+
+    render(<JournalPanel {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByLabelText('Edit journal SXSW Weekend'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('SXSW Weekend (edited)')).toBeInTheDocument()
+    )
+    expect(screen.queryByText('Edit Journal Entry')).not.toBeInTheDocument()
   })
 
   it('shows a delete error message when the delete API call fails', async () => {
