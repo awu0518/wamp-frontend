@@ -8,13 +8,19 @@ import Register from './Components/Register'
 import Map from './Components/Map/Map'
 import About from './Components/About'
 import History from './Components/History'
+import LeaderBoard from './Components/LeaderBoard'
+
 
 // function History() {
 // return <div>Personal History Page</div>
 // }
 
 // Pages that need the full viewport (no flex centering applied by the shell)
-const FULL_BLEED_ROUTES = ['/map'];
+const FULL_BLEED_ROUTES = ['/map', '/about', '/leaderboard'];
+
+function TestLeaderboard() {
+  return <div style={{ color: "black", fontSize: "40px", padding: "40px" }}>Inline route works</div>;
+}
 
 function App() {
   const location = useLocation();
@@ -31,6 +37,7 @@ function App() {
           <Route path='/map' element={<Map />} />
           <Route path='/styleGuide' element={<StyleGuide />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/leaderboard" element={<LeaderBoard />} />
           <Route
             path="/history"
             element={
