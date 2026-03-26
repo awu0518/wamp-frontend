@@ -266,4 +266,13 @@ export function deleteJournal(journalId) {
   return del(`/journals/${encodeURIComponent(journalId)}`);
 }
 
+export async function getLeaderboard() {
+  const response = await fetch(`${BASE_URL}/leaderboard`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load leaderboard");
+  }
+
+  return response.json();
+}
 

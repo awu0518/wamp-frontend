@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
+import { getLeaderboard } from "../services/api";
 
 export default function LeaderBoard() {
-  const [leaders, setLeaders] = useState([
-    { id: 1, username: "Alex", placesVisited: 18 },
-    { id: 2, username: "Mingjian", placesVisited: 15 },
-    { id: 3, username: "Wendy", placesVisited: 12 },
-    { id: 4, username: "Sophia", placesVisited: 10 },
-    { id: 5, username: "Daniel", placesVisited: 9 },
-    { id: 6, username: "Emma", placesVisited: 8 },
-  ]);
-
+  const [leaders, setLeaders] = useState([]);
+  const [popularDestinations, setPopularDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    async function loadLeaderboard() {
+      setLoading(true);
+      setError(null);
 
+      try {
+        const data = await getLeaderboard();
+        setLeaders(Array.isArray(data.rankings) ? data.rankings : []);
+        setPopularDestinations(
+          Array.isArray(data.popularDestinations) ? data.popularDestinations : []
+        );
+      } catch (err) {
+        setError(err.message || "Failed to load leaderboard");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadLeaderboard();
   }, []);
 
   return (
@@ -45,7 +58,7 @@ export default function LeaderBoard() {
             <div className="flex flex-col gap-6">
                 {leaders.map((user, index) => (
                 <div
-                    key={user.id}
+                    key={user.user_id}
                     className="bg-[#faf8f5] border border-[#e5d8c7] rounded-2xl shadow-sm p-6"
                 >
                     <div className="flex items-center justify-between mb-4">
