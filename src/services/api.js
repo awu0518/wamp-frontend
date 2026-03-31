@@ -11,15 +11,17 @@ const BASE_URL =
   import.meta.env.REACT_APP_API_BASE_URL ||
   'https://wamp-limjiannn.pythonanywhere.com';
 
+/** Valid bearer token from localStorage, or null (ignores literal "undefined"/"null" strings). */
+export function getStoredToken() {
+  const tokenRaw = localStorage.getItem('token');
+  return tokenRaw && tokenRaw !== 'undefined' && tokenRaw !== 'null' ? tokenRaw : null;
+}
+
 // Helper
 // Core request function. Attaches JSON headers and auth token (if present).
 // Returns parsed JSON on success; throws on HTTP errors.
 async function request(path, options = {}) {
-  // const token = localStorage.getItem('token');
-
-  const tokenRaw = localStorage.getItem("token");
-  const token =
-    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
+  const token = getStoredToken();
 
   const headers = {
     'Content-Type': 'application/json',

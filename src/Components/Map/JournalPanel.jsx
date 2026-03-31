@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getJournals, deleteJournal } from '../../services/api';
 import JournalForm from './JournalForm';
+import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
 
-export default function JournalPanel({ city, stateCode, onClose, onJournalAdded }) {
+export default function JournalPanel({
+  city,
+  stateCode,
+  dateFrom = '',
+  dateTo = '',
+  onClose,
+  onJournalAdded,
+}) {
   const [result, setResult] = useState({ journals: null, error: null });
   const [showForm, setShowForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -38,7 +46,12 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
     return () => { cancelled = true; };
   }, [city, stateCode, isLoggedIn, refreshKey]);
 
-  const journals = result.journals || [];
+  const allForCity = result.journals || [];
+  const journals = useMemo(
+    () => allForCity.filter((j) => journalMatchesDateRange(j, dateFrom, dateTo)),
+    [allForCity, dateFrom, dateTo],
+  );
+  const dateFilterActive = hasJournalDateFilter(dateFrom, dateTo);
   const error = result.error;
   const showLoginPrompt = !isLoggedIn || result.authError;
 
@@ -125,7 +138,11 @@ export default function JournalPanel({ city, stateCode, onClose, onJournalAdded 
         {!showLoginPrompt && !loading && !error && journals.length === 0 && !showForm && (
           <div className="flex items-start gap-2 bg-sand-100 border border-sand-200 rounded-lg p-3">
             <span className="text-sand-500 text-sm leading-none mt-0.5">ℹ</span>
-            <p className="text-xs text-sand-500">No journal entries for {city} yet.</p>
+            <p className="text-xs text-sand-500">
+              {dateFilterActive && allForCity.length > 0
+                ? `No journal entries for ${city} in this visit date range.`
+                : `No journal entries for ${city} yet.`}
+            </p>
           </div>
         )}
 

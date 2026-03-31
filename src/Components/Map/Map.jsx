@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { geoEqualEarth, geoAlbersUsa, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
-import { getCountries, getStates, searchCities, getJournals } from '../../services/api';
+import { getCountries, getStates, searchCities, getJournals, getStoredToken } from '../../services/api';
 import { COLOR, NUMERIC_TO_ALPHA2 } from './mapConstants';
+import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
 import WorldMap from './WorldMap';
 import USMap from './USMap';
 import StateSidebar from './StateSidebar';
@@ -143,36 +144,58 @@ export default function Map() {
       .finally(() => setCitiesLoading(false));
   };
 
-  // ── Journal counts (GET /journals) — multi-level aggregation ───────────
-  const [journalCounts, setJournalCounts] = useState({
-    byCity: {},
-    byState: {},
-    byCountry: {},
-  });
+  // ── Journals (GET /journals) — raw list + date filter + aggregation ─────
+  const [rawJournals, setRawJournals] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [selectedCity, setSelectedCity] = useState(null);
 
+  const [, bumpAuthRead] = useState(0);
+  const isLoggedIn = !!getStoredToken();
+
+  useEffect(() => {
+    const onFocus = () => bumpAuthRead((n) => n + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const refreshJournalCounts = useCallback(() => {
-    if (!localStorage.getItem('token')) return;
+    if (!getStoredToken()) {
+      setRawJournals([]);
+      return;
+    }
     getJournals()
       .then((data) => {
-        const byCity = {};
-        const byState = {};
-        const byCountry = {};
-        (data.journals || []).forEach((j) => {
-          if (j.location_name) byCity[j.location_name] = (byCity[j.location_name] || 0) + 1;
-          if (j.state_code) byState[j.state_code] = (byState[j.state_code] || 0) + 1;
-          if (j.iso_code) byCountry[j.iso_code] = (byCountry[j.iso_code] || 0) + 1;
-        });
-        setJournalCounts({ byCity, byState, byCountry });
+        setRawJournals(data.journals || []);
       })
       .catch((err) => {
-        if (err.status === 401) localStorage.removeItem('token');
+        if (err.status === 401) {
+          localStorage.removeItem('token');
+          setRawJournals([]);
+        }
       });
-  }, [setJournalCounts]);
+  }, []);
 
   useEffect(() => {
     refreshJournalCounts();
   }, [refreshJournalCounts]);
+
+  const filteredJournals = useMemo(
+    () => rawJournals.filter((j) => journalMatchesDateRange(j, dateFrom, dateTo)),
+    [rawJournals, dateFrom, dateTo],
+  );
+
+  const journalCounts = useMemo(() => {
+    const byCity = {};
+    const byState = {};
+    const byCountry = {};
+    filteredJournals.forEach((j) => {
+      if (j.location_name) byCity[j.location_name] = (byCity[j.location_name] || 0) + 1;
+      if (j.state_code) byState[j.state_code] = (byState[j.state_code] || 0) + 1;
+      if (j.iso_code) byCountry[j.iso_code] = (byCountry[j.iso_code] || 0) + 1;
+    });
+    return { byCity, byState, byCountry };
+  }, [filteredJournals]);
 
   // ── Tooltip ────────────────────────────────────────────────────────────
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
@@ -206,32 +229,78 @@ export default function Map() {
 
   const isLoading = geoLoading || countriesLoading || statesLoading;
 
-  // ── Total journal count for the legend ─────────────────────────────────
+  // ── Total journal count for the legend (respects date filter) ───────────
   const totalJournals = Object.values(journalCounts.byCity).reduce((a, b) => a + b, 0);
+  const dateFilterActive = hasJournalDateFilter(dateFrom, dateTo);
 
   return (
     <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 72px)' }}>
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="px-6 py-3 border-b border-sand-200 bg-white flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-ocean-900">
-            {view === 'world' ? 'Geographic Explorer' : 'United States'}
-          </h1>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            {view === 'world'
-              ? 'Countries highlighted in blue exist in the database. Click the USA to explore states.'
-              : 'Green states exist in the database. Click any green state to see its cities.'}
-          </p>
+      <div className="px-6 py-3 border-b border-sand-200 bg-white shrink-0">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-ocean-900">
+              {view === 'world' ? 'Geographic Explorer' : 'United States'}
+            </h1>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              {view === 'world'
+                ? 'Countries highlighted in blue exist in the database. Click the USA to explore states.'
+                : 'Green states exist in the database. Click any green state to see its cities.'}
+            </p>
+          </div>
+          {view === 'us' && (
+            <button
+              onClick={() => { setView('world'); setSelectedState(null); setSelectedCity(null); }}
+              className="border-2 border-earth-600 text-earth-600 hover:bg-earth-600 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5 shrink-0"
+            >
+              ← World Map
+            </button>
+          )}
         </div>
-        {view === 'us' && (
-          <button
-            onClick={() => { setView('world'); setSelectedState(null); setSelectedCity(null); }}
-            className="border-2 border-earth-600 text-earth-600 hover:bg-earth-600 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5 shrink-0"
-          >
-            ← World Map
-          </button>
-        )}
+
+        {/* Visit date filter — own row so it stays visible (works when logged in; sign-in hint otherwise) */}
+        <div
+          className={`mt-3 flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border px-3 py-2.5 text-xs ${
+            isLoggedIn
+              ? 'border-ocean-200 bg-ocean-50/60 text-neutral-700'
+              : 'border-sand-200 bg-sand-50 text-neutral-500'
+          }`}
+        >
+          <span className="font-semibold text-ocean-900 whitespace-nowrap">Filter by visit date</span>
+          {!isLoggedIn && (
+            <span className="text-neutral-500">
+              — log in to load your journals; date range still applies once you do.
+            </span>
+          )}
+          <label className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8"
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">To</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8"
+            />
+          </label>
+          {isLoggedIn && dateFilterActive && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="text-ocean-700 hover:text-ocean-900 font-semibold px-2 py-1 rounded-md hover:bg-white/80"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Main area ─────────────────────────────────────────────────── */}
@@ -330,6 +399,8 @@ export default function Map() {
           <JournalPanel
             city={selectedCity}
             stateCode={selectedState.code}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
             onClose={() => setSelectedCity(null)}
             onJournalAdded={refreshJournalCounts}
           />
@@ -352,10 +423,13 @@ export default function Map() {
               <div className="w-3.5 h-3.5 rounded-sm bg-sand-200" />
               <span className="text-neutral-600">Not in database</span>
             </div>
-            {totalJournals > 0 && (
+            {isLoggedIn && totalJournals > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLOR.badge }} />
-                <span className="text-neutral-600">My journals ({totalJournals})</span>
+                <span className="text-neutral-600">
+                  My journals ({totalJournals})
+                  {dateFilterActive && ' · filtered'}
+                </span>
               </div>
             )}
             <span className="ml-auto text-xs bg-ocean-50 text-ocean-600 px-3 py-1 rounded-full font-medium">
@@ -372,10 +446,13 @@ export default function Map() {
               <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.stateOut }} />
               <span className="text-neutral-600">Not in database</span>
             </div>
-            {totalJournals > 0 && (
+            {isLoggedIn && totalJournals > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLOR.badge }} />
-                <span className="text-neutral-600">My journals ({totalJournals})</span>
+                <span className="text-neutral-600">
+                  My journals ({totalJournals})
+                  {dateFilterActive && ' · filtered'}
+                </span>
               </div>
             )}
             <span className="ml-auto text-xs bg-forest-50 text-forest-600 px-3 py-1 rounded-full font-medium">
