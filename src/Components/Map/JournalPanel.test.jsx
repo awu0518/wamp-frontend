@@ -211,4 +211,100 @@ describe('JournalPanel', () => {
     )
     expect(screen.getByText('SXSW Weekend')).toBeInTheDocument()
   })
+
+  describe('visit date filter', () => {
+    it('hides journals outside the visit date range', async () => {
+      localStorage.setItem('token', 'fake-token')
+      getJournals.mockResolvedValueOnce({
+        journals: [
+          {
+            _id: 'j1',
+            title: 'Old trip',
+            location_name: 'Austin',
+            state_code: 'TX',
+            visited_at: '2019-01-10',
+          },
+          {
+            _id: 'j2',
+            title: 'Recent trip',
+            location_name: 'Austin',
+            state_code: 'TX',
+            visited_at: '2025-03-01',
+          },
+        ],
+      })
+
+      render(
+        <JournalPanel
+          {...defaultProps}
+          dateFrom="2025-01-01"
+          dateTo="2025-12-31"
+        />,
+      )
+
+      await waitFor(() =>
+        expect(screen.getByText('Recent trip')).toBeInTheDocument(),
+      )
+      expect(screen.queryByText('Old trip')).not.toBeInTheDocument()
+    })
+
+    it('shows date-range empty message when all city journals fall outside the range', async () => {
+      localStorage.setItem('token', 'fake-token')
+      getJournals.mockResolvedValueOnce({
+        journals: [
+          {
+            _id: 'j1',
+            title: 'Only old',
+            location_name: 'Austin',
+            state_code: 'TX',
+            visited_at: '2018-05-01',
+          },
+        ],
+      })
+
+      render(
+        <JournalPanel
+          {...defaultProps}
+          dateFrom="2024-01-01"
+          dateTo="2024-12-31"
+        />,
+      )
+
+      await waitFor(() =>
+        expect(
+          screen.getByText(/No journal entries for Austin in this visit date range/i),
+        ).toBeInTheDocument(),
+      )
+      expect(screen.queryByText('Only old')).not.toBeInTheDocument()
+    })
+
+    it('shows all matching journals when no date filter is set', async () => {
+      localStorage.setItem('token', 'fake-token')
+      getJournals.mockResolvedValueOnce({
+        journals: [
+          {
+            _id: 'j1',
+            title: 'Old trip',
+            location_name: 'Austin',
+            state_code: 'TX',
+            visited_at: '2019-01-10',
+          },
+          {
+            _id: 'j2',
+            title: 'New trip',
+            location_name: 'Austin',
+            state_code: 'TX',
+            visited_at: '2025-03-01',
+          },
+        ],
+      })
+
+      render(<JournalPanel {...defaultProps} dateFrom="" dateTo="" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Old trip')).toBeInTheDocument()
+        expect(screen.getByText('New trip')).toBeInTheDocument()
+      })
+    })
+  })
 })
