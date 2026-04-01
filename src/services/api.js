@@ -251,6 +251,13 @@ export async function register(email, username, password) {
 
 // Journals
 
+function resolveJournalPath(journalTarget) {
+  if (typeof journalTarget === 'string' && journalTarget.startsWith('/')) {
+    return journalTarget;
+  }
+  return `/journals/${encodeURIComponent(journalTarget)}`;
+}
+
 export function getJournals(params = {}) {
   const query = new URLSearchParams(params).toString();
   return get(`/journals${query ? `?${query}` : ''}`);
