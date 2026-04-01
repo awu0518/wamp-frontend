@@ -66,6 +66,10 @@ export default function History() {
   async function onDelete(journalId) {
     if (!confirm("Delete this entry?")) return;
     try {
+      // For HATEOAS
+      const id = journal._id ?? journal.id;
+      const deleteTarget = journal.links?.delete ?? id;
+
       await deleteJournal(journalId);
       setItems((prev) => prev.filter((x) => (x._id ?? x.id) !== journalId));
     } catch (e) {
@@ -97,7 +101,10 @@ export default function History() {
         visited_at: editVisitDate || undefined,
       };
 
-      await updateJournal(id, payload);
+      // HATEOAS 
+      const journal = items.find((x) => (x._id ?? x.id) === id);
+      const updateTarget = journal?.links?.update ?? id;
+      await updateJournal(updateTarget, payload);
 
       await load();
       setEditingId(null);
@@ -210,7 +217,7 @@ export default function History() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => onDelete(id)}
+                          onClick={() => onDelete(j)}
                           className="text-sm px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
                         >
                           Delete
