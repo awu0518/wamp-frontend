@@ -51,21 +51,21 @@ export default function LeaderBoard() {
             Top Travelers
           </h2>
           <p className="text-center text-[#a67c52] mb-8 text-lg">
-            Scroll to explore the current rankings.
+            Scroll to explore the current top 100 rankings. 
           </p>
 
           <div className="max-h-[500px] overflow-y-auto pr-2">
             <div className="flex flex-col gap-6">
-                {leaders.map((user, index) => (
+                {leaders.slice(0,100).map((user, index) => (
                 <div
                     key={user.user_id}
                     className="bg-[#faf8f5] border border-[#e5d8c7] rounded-2xl shadow-sm p-6"
                 >
                     <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-full bg-[#3d8756] text-white flex items-center justify-center text-xl font-bold">
+                    <div className="w-10 h-10 rounded-full bg-[#3d8756] text-white flex items-center justify-center text-xl font-bold">
                         {index + 1}
                     </div>
-                    <span className="text-sm font-semibold text-[#a67c52]">
+                    <span className="text-base font-semibold text-[#a67c52]">
                         Rank #{index + 1}
                     </span>
                     </div>

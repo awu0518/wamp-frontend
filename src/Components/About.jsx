@@ -22,7 +22,9 @@ const steps = [
     title: 'Add Your Visits',
     description:
       'When you add a location, fill in details like the place name, the date you visited, and any notes or memories from your trip.',
-  },
+    linkTo: '/map',
+    linkLabel: 'Add Visit',
+    },
   {
     number: '4',
     title: 'View Your History',
