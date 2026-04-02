@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { register } from "../services/api";
+import { getStoredToken, register } from "../services/api";
 import { Navigate, Link } from "react-router-dom";
 
 export default function Register() {
@@ -10,11 +10,7 @@ export default function Register() {
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // const token = localStorage.getItem("token");
-
-  const tokenRaw = localStorage.getItem("token");
-  const token =
-    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
+  const token = getStoredToken();
 
   if (token) {
     return <Navigate to="/history" replace />;

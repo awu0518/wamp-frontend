@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login } from "../services/api";
+import { getStoredToken, login } from "../services/api";
 import { Navigate, Link } from "react-router-dom";
 
 export default function Login() {
@@ -9,13 +9,8 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
-//  const token = localStorage.getItem("token");
 
-  const tokenRaw = localStorage.getItem("token");
-  const token =
-    tokenRaw && tokenRaw !== "undefined" && tokenRaw !== "null" ? tokenRaw : null;
-
+  const token = getStoredToken();
 
   if (token) {
     return <Navigate to="/history" replace />;
