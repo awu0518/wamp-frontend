@@ -251,13 +251,6 @@ export async function register(email, username, password) {
 
 // Journals
 
-function resolveJournalPath(journalTarget) {
-  if (typeof journalTarget === 'string' && journalTarget.startsWith('/')) {
-    return journalTarget;
-  }
-  return `/journals/${encodeURIComponent(journalTarget)}`;
-}
-
 export function getJournals(params = {}) {
   const query = new URLSearchParams(params).toString();
   return get(`/journals${query ? `?${query}` : ''}`);
@@ -275,13 +268,7 @@ export function deleteJournal(journalId) {
   return del(`/journals/${encodeURIComponent(journalId)}`);
 }
 
-export async function getLeaderboard() {
-  const response = await fetch(`${BASE_URL}/leaderboard`);
-
-  if (!response.ok) {
-    throw new Error("Failed to load leaderboard");
-  }
-
-  return response.json();
+export function getLeaderboard() {
+  return get('/leaderboard');
 }
 
