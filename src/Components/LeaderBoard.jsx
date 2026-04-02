@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getLeaderboard } from "../services/api";
 
 export default function LeaderBoard() {
@@ -7,26 +7,51 @@ export default function LeaderBoard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    async function loadLeaderboard() {
-      setLoading(true);
-      setError(null);
+  const loadLeaderboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const data = await getLeaderboard();
-        setLeaders(Array.isArray(data.rankings) ? data.rankings : []);
-        setPopularDestinations(
-          Array.isArray(data.popularDestinations) ? data.popularDestinations : []
-        );
-      } catch (err) {
-        setError(err.message || "Failed to load leaderboard");
-      } finally {
-        setLoading(false);
-      }
+    try {
+      const data = await getLeaderboard();
+      setLeaders(Array.isArray(data.rankings) ? data.rankings : []);
+      setPopularDestinations(
+        Array.isArray(data.popularDestinations) ? data.popularDestinations : []
+      );
+    } catch (err) {
+      setError(err.message || "Failed to load leaderboard");
+    } finally {
+      setLoading(false);
     }
-
-    loadLeaderboard();
   }, []);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f5f1eb] flex items-center justify-center px-6">
+        <p className="text-[#295c3b] text-lg font-serif">Loading leaderboard…</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-[#f5f1eb] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={() => loadLeaderboard()}
+            className="px-4 py-2 rounded-lg bg-[#295c3b] text-white hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f1eb]">
@@ -87,6 +112,29 @@ export default function LeaderBoard() {
             </div>
         </div>
       </section>
+
+      {popularDestinations.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 pb-14">
+          <div className="bg-white rounded-2xl shadow-md border border-[#e5d8c7] p-6">
+            <h2 className="text-2xl font-bold text-[#295c3b] text-center mb-6 font-serif">
+              Popular destinations
+            </h2>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {popularDestinations.slice(0, 12).map((d) => (
+                <li
+                  key={d.name}
+                  className="flex justify-between items-center rounded-xl border border-[#e5d8c7] bg-[#faf8f5] px-4 py-3 text-[#295c3b]"
+                >
+                  <span className="font-medium truncate pr-2">{d.name || "—"}</span>
+                  <span className="text-[#2f7db2] font-semibold shrink-0">
+                    {d.count} visits
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

@@ -63,14 +63,12 @@ export default function History() {
     return out;
   }, [items, q, sort]);
 
-  async function onDelete(journalId) {
-    if (!confirm("Delete this entry?")) return;
+  async function onDelete(entry) {
+    const journalId = entry._id ?? entry.id;
+    if (!journalId || !confirm("Delete this entry?")) return;
     try {
-      // For HATEOAS
-      const id = journal._id ?? journal.id;
-      const deleteTarget = journal.links?.delete ?? id;
-
-      await deleteJournal(journalId);
+      const deleteTarget = entry.links?.delete ?? journalId;
+      await deleteJournal(deleteTarget);
       setItems((prev) => prev.filter((x) => (x._id ?? x.id) !== journalId));
     } catch (e) {
       alert(e.message || "Delete failed");
@@ -78,7 +76,7 @@ export default function History() {
   }
 
   function startEdit(j) {
-    const id = j._id;
+    const id = j._id ?? j.id;
     setEditingId(id);
     setEditTitle(j.title ?? "");
     setEditNotes(j.body ?? "");
@@ -168,7 +166,7 @@ export default function History() {
       ) : (
         <div className="mt-6 space-y-3">
           {filtered.map((j) => {
-            const id = j._id;
+            const id = j._id ?? j.id;
             const when = j.visited_at ?? j.visit_date ?? j.date ?? j.created_at;
             const title = j.title ?? j.location_name ?? "Journal Entry";
             const loc = [j.city, j.state, j.country].filter(Boolean).join(", ");

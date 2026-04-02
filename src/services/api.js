@@ -251,6 +251,18 @@ export async function register(email, username, password) {
 
 // Journals
 
+/** Backend may return HATEOAS paths like `/journals/<id>` or a bare id string. */
+function journalRequestPath(target) {
+  if (target == null || target === '') {
+    return '/journals/';
+  }
+  const s = String(target);
+  if (s.startsWith('/journals/')) {
+    return s;
+  }
+  return `/journals/${encodeURIComponent(s)}`;
+}
+
 export function getJournals(params = {}) {
   const query = new URLSearchParams(params).toString();
   return get(`/journals${query ? `?${query}` : ''}`);
@@ -261,11 +273,11 @@ export function createJournal(data) {
 }
 
 export function updateJournal(journalId, data) {
-  return put(`/journals/${encodeURIComponent(journalId)}`, data);
+  return put(journalRequestPath(journalId), data);
 }
 
 export function deleteJournal(journalId) {
-  return del(`/journals/${encodeURIComponent(journalId)}`);
+  return del(journalRequestPath(journalId));
 }
 
 export function getLeaderboard() {
