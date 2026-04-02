@@ -111,7 +111,7 @@ export default function Login() {
       </form>
 
         <div className="text-center mt-4">
-          <p className="text-sm test-netural-600">
+          <p className="text-sm text-neutral-600">
             <Link
              to="/register"
              className="text-ocean-600 hover:text-ocean-800 font-medium"
