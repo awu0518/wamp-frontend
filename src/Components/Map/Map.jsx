@@ -4,6 +4,7 @@ import { feature } from 'topojson-client';
 import { getCountries, getStates, searchCities, getJournals, getStoredToken } from '../../services/api';
 import { COLOR, NUMERIC_TO_ALPHA2 } from './mapConstants';
 import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
+import { filterJournalsByLocation, hasLocationFilter } from './journalLocationFilter';
 import WorldMap from './WorldMap';
 import USMap from './USMap';
 import StateSidebar from './StateSidebar';
@@ -187,22 +188,25 @@ export default function Map() {
   const [geoFilterStateName, setGeoFilterStateName] = useState('');
   const [geoFilterCity, setGeoFilterCity] = useState('');
 
-  const locationFilterActive =
-    Boolean(geoFilterCountry) || Boolean(geoFilterStateName) || Boolean(geoFilterCity);
+  const locationFilterActive = hasLocationFilter(
+    geoFilterCountry,
+    geoFilterStateName,
+    geoFilterCity,
+  );
 
   const filteredJournals = useMemo(() => {
-    let list = rawJournals.filter((j) => journalMatchesDateRange(j, dateFrom, dateTo));
-    if (geoFilterCountry) {
-      list = list.filter((j) => j.iso_code === geoFilterCountry);
-    }
-    if (geoFilterStateName) {
-      const code = stateNameToCode[geoFilterStateName];
-      if (code) list = list.filter((j) => j.state_code === code);
-    }
-    if (geoFilterCity) {
-      list = list.filter((j) => j.location_name === geoFilterCity);
-    }
-    return list;
+    const dateFiltered = rawJournals.filter((j) =>
+      journalMatchesDateRange(j, dateFrom, dateTo),
+    );
+    return filterJournalsByLocation(
+      dateFiltered,
+      {
+        countryIso: geoFilterCountry,
+        stateName: geoFilterStateName,
+        cityName: geoFilterCity,
+      },
+      stateNameToCode,
+    );
   }, [
     rawJournals,
     dateFrom,
