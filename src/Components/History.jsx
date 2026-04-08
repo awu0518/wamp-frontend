@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getJournals, deleteJournal, updateJournal } from "../services/api"; 
+import { Link } from "react-router-dom";
 
 export default function History() {
   const [items, setItems] = useState([]);
@@ -134,10 +135,19 @@ export default function History() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+  <div className="w-full max-w-3xl mx-auto p-6">
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">Personal History</h1>
 
+        <Link
+          to="/map"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-ocean-600 hover:bg-ocean-800 text-white text-xl font-bold"
+          title="Add from map"
+        >
+          +
+        </Link>
+      </div>
         <div className="flex gap-2 items-center">
           <input
             value={q}
