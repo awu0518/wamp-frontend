@@ -37,10 +37,10 @@ export default function Login() {
 
   return (
     <div className="w-full flex justify-center px-4">
-    <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-sand-200 p-8">
-      <h2 className="text-2xl font-bold text-center mb-6">
-        Welcome Back
-      </h2>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-sand-200 p-8">
+        <h2 className="text-2xl font-bold text-center mb-6">
+          Welcome Back
+        </h2>
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
@@ -108,26 +108,24 @@ export default function Login() {
         <div className="text-center mt-4">
           <p className="text-sm text-neutral-600">
             <Link
-             to="/register"
-             className="text-ocean-600 hover:text-ocean-800 font-medium"
+              to="/register"
+              className="text-ocean-600 hover:text-ocean-800 font-medium"
             >
               Register here
             </Link>
           </p>
         </div>
 
-      {error && (
-        <p style={{ color: "red", marginTop: "10px" }}>
-          {error}
-        </p>
-      )}
+        {error && (
+          <p className="text-red-600 mt-3 text-sm text-center">{error}</p>
+        )}
 
-      {success && (
-        <p style={{ color: "green", marginTop: "10px" }}>
-          Login successful!
-        </p>
-      )}
-    </div>
+        {success && (
+          <p className="text-green-700 mt-3 text-sm text-center">
+            Login successful!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
