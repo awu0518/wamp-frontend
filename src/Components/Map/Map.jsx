@@ -4,6 +4,7 @@ import { feature } from 'topojson-client';
 import { getCountries, getStates, searchCities, getJournals, getStoredToken } from '../../services/api';
 import { COLOR, NUMERIC_TO_ALPHA2 } from './mapConstants';
 import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
+import { filterJournalsByLocation, hasLocationFilter } from './journalLocationFilter';
 import WorldMap from './WorldMap';
 import USMap from './USMap';
 import StateSidebar from './StateSidebar';
@@ -161,7 +162,9 @@ export default function Map() {
 
   const refreshJournalCounts = useCallback(() => {
     if (!getStoredToken()) {
-      setRawJournals([]);
+      void Promise.resolve().then(() => {
+        setRawJournals([]);
+      });
       return;
     }
     getJournals()
@@ -180,10 +183,39 @@ export default function Map() {
     refreshJournalCounts();
   }, [refreshJournalCounts]);
 
-  const filteredJournals = useMemo(
-    () => rawJournals.filter((j) => journalMatchesDateRange(j, dateFrom, dateTo)),
-    [rawJournals, dateFrom, dateTo],
+  // ── Location filter (country / state / city) — narrows journals + syncs with map ──
+  const [geoFilterCountry, setGeoFilterCountry] = useState('');
+  const [geoFilterStateName, setGeoFilterStateName] = useState('');
+  const [geoFilterCity, setGeoFilterCity] = useState('');
+
+  const locationFilterActive = hasLocationFilter(
+    geoFilterCountry,
+    geoFilterStateName,
+    geoFilterCity,
   );
+
+  const filteredJournals = useMemo(() => {
+    const dateFiltered = rawJournals.filter((j) =>
+      journalMatchesDateRange(j, dateFrom, dateTo),
+    );
+    return filterJournalsByLocation(
+      dateFiltered,
+      {
+        countryIso: geoFilterCountry,
+        stateName: geoFilterStateName,
+        cityName: geoFilterCity,
+      },
+      stateNameToCode,
+    );
+  }, [
+    rawJournals,
+    dateFrom,
+    dateTo,
+    geoFilterCountry,
+    geoFilterStateName,
+    geoFilterCity,
+    stateNameToCode,
+  ]);
 
   const journalCounts = useMemo(() => {
     const byCity = {};
@@ -213,6 +245,10 @@ export default function Map() {
   const handleCountryClick = (geo) => {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
     if (alpha2 === 'US') {
+      setGeoFilterCountry('US');
+      setGeoFilterStateName('');
+      setGeoFilterCity('');
+      setSelectedCity(null);
       setView('us');
       loadStates();
       loadUsGeo();
@@ -220,11 +256,74 @@ export default function Map() {
   };
 
   const handleStateClick = (geo) => {
-    if (stateNames.has(geo.properties.name)) loadCities(geo.properties.name);
+    const name = geo.properties.name;
+    if (stateNames.has(name)) {
+      setGeoFilterStateName(name);
+      setGeoFilterCity('');
+      setSelectedCity(null);
+      loadCities(name);
+    }
   };
 
   const handleCityClick = (cityName) => {
     setSelectedCity(cityName);
+    setGeoFilterCity(cityName);
+  };
+
+  const clearLocationFilters = useCallback(() => {
+    setGeoFilterCountry('');
+    setGeoFilterStateName('');
+    setGeoFilterCity('');
+    setSelectedState(null);
+    setSelectedCity(null);
+    setCities([]);
+    setView('world');
+  }, []);
+
+  const sortedCountryOptions = useMemo(
+    () =>
+      Object.entries(isoToName)
+        .filter(([iso]) => iso)
+        .sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' })),
+    [isoToName],
+  );
+
+  const sortedStateNames = useMemo(
+    () => [...stateNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+    [stateNames],
+  );
+
+  const onLocationCountryChange = (iso) => {
+    setGeoFilterCountry(iso);
+    setGeoFilterStateName('');
+    setGeoFilterCity('');
+    setSelectedState(null);
+    setSelectedCity(null);
+    setCities([]);
+    if (iso === 'US') {
+      setView('us');
+      loadStates();
+      loadUsGeo();
+    } else {
+      setView('world');
+    }
+  };
+
+  const onLocationStateChange = (stateName) => {
+    setGeoFilterStateName(stateName);
+    setGeoFilterCity('');
+    setSelectedCity(null);
+    if (!stateName) {
+      setSelectedState(null);
+      setCities([]);
+    } else {
+      loadCities(stateName);
+    }
+  };
+
+  const onLocationCityChange = (cityName) => {
+    setGeoFilterCity(cityName);
+    setSelectedCity(cityName || null);
   };
 
   const isLoading = geoLoading || countriesLoading || statesLoading;
@@ -232,6 +331,9 @@ export default function Map() {
   // ── Total journal count for the legend (respects date filter) ───────────
   const totalJournals = Object.values(journalCounts.byCity).reduce((a, b) => a + b, 0);
   const dateFilterActive = hasJournalDateFilter(dateFrom, dateTo);
+  const filterHint =
+    [dateFilterActive && 'date', locationFilterActive && 'location'].filter(Boolean).join(' · ') ||
+    null;
 
   return (
     <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 72px)' }}>
@@ -251,7 +353,8 @@ export default function Map() {
           </div>
           {view === 'us' && (
             <button
-              onClick={() => { setView('world'); setSelectedState(null); setSelectedCity(null); }}
+              type="button"
+              onClick={clearLocationFilters}
               className="border-2 border-earth-600 text-earth-600 hover:bg-earth-600 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5 shrink-0"
             >
               ← World Map
@@ -298,6 +401,70 @@ export default function Map() {
               className="text-ocean-700 hover:text-ocean-900 font-semibold px-2 py-1 rounded-md hover:bg-white/80"
             >
               Clear dates
+            </button>
+          )}
+        </div>
+
+        {/* Location filter — country / state / city */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-forest-200 bg-forest-50/50 px-3 py-2.5 text-xs text-neutral-700">
+          <span className="font-semibold text-forest-900 whitespace-nowrap">Filter by location</span>
+          <label className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">Country</span>
+            <select
+              value={geoFilterCountry}
+              onChange={(e) => onLocationCountryChange(e.target.value)}
+              disabled={countriesLoading}
+              className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8 max-w-44 sm:max-w-56 disabled:opacity-50"
+            >
+              <option value="">All countries</option>
+              {sortedCountryOptions.map(([iso, name]) => (
+                <option key={iso} value={iso}>
+                  {name} ({iso})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">State</span>
+            <select
+              value={geoFilterStateName}
+              onChange={(e) => onLocationStateChange(e.target.value)}
+              disabled={view !== 'us' || !statesLoaded || statesLoading}
+              className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8 max-w-44 sm:max-w-56 disabled:opacity-50"
+              title={view !== 'us' ? 'Open the United States map to choose a state' : undefined}
+            >
+              <option value="">All states</option>
+              {sortedStateNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">City</span>
+            <select
+              value={geoFilterCity}
+              onChange={(e) => onLocationCityChange(e.target.value)}
+              disabled={!selectedState || citiesLoading}
+              className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8 max-w-44 sm:max-w-64 disabled:opacity-50"
+              title={!selectedState ? 'Choose a state first' : undefined}
+            >
+              <option value="">All cities</option>
+              {cities.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {locationFilterActive && (
+            <button
+              type="button"
+              onClick={clearLocationFilters}
+              className="text-forest-800 hover:text-forest-950 font-semibold px-2 py-1 rounded-md hover:bg-white/80"
+            >
+              Clear location
             </button>
           )}
         </div>
@@ -389,7 +556,13 @@ export default function Map() {
             citiesLoading={citiesLoading}
             citiesError={citiesError}
             journalCounts={journalCounts.byCity}
-            onClose={() => { setSelectedState(null); setSelectedCity(null); }}
+            onClose={() => {
+              setGeoFilterStateName('');
+              setGeoFilterCity('');
+              setSelectedState(null);
+              setSelectedCity(null);
+              setCities([]);
+            }}
             onCityClick={handleCityClick}
           />
         )}
@@ -401,7 +574,10 @@ export default function Map() {
             stateCode={selectedState.code}
             dateFrom={dateFrom}
             dateTo={dateTo}
-            onClose={() => setSelectedCity(null)}
+            onClose={() => {
+              setSelectedCity(null);
+              setGeoFilterCity('');
+            }}
             onJournalAdded={refreshJournalCounts}
           />
         )}
@@ -428,7 +604,7 @@ export default function Map() {
                 <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLOR.badge }} />
                 <span className="text-neutral-600">
                   My journals ({totalJournals})
-                  {dateFilterActive && ' · filtered'}
+                  {filterHint && ` · ${filterHint}`}
                 </span>
               </div>
             )}
@@ -451,7 +627,7 @@ export default function Map() {
                 <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLOR.badge }} />
                 <span className="text-neutral-600">
                   My journals ({totalJournals})
-                  {dateFilterActive && ' · filtered'}
+                  {filterHint && ` · ${filterHint}`}
                 </span>
               </div>
             )}

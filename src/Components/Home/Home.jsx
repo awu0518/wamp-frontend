@@ -5,6 +5,7 @@ const features = [
     icon: '🗺️',
     title: 'Interactive Map',
     description: 'Mark the places you\'ve been on a beautiful, interactive world map.',
+    path: '/map',
   },
   {
     icon: '📝',
@@ -20,6 +21,7 @@ const features = [
     icon: '🏆',
     title: 'Leaderboards',
     description: 'See how your travels stack up with leaderboards of the most visited places.',
+    path: '/leaderboard',
   },
 ]
 
@@ -59,9 +61,10 @@ function Home() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {features.map((feature) => (
-            <div
+            <Link
+              to={feature.path}
               key={feature.title}
-              className="bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center"
+              className="block bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center hover:-translate-y-1 transform"
             >
               <div className="text-3xl mb-3">{feature.icon}</div>
               <h3 className="text-base font-semibold font-heading text-forest-800 mb-1.5">
@@ -70,7 +73,7 @@ function Home() {
               <p className="text-sm text-earth-600/70">
                 {feature.description}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -46,7 +46,10 @@ export default function JournalPanel({
     return () => { cancelled = true; };
   }, [city, stateCode, isLoggedIn, refreshKey]);
 
-  const allForCity = result.journals || [];
+  const allForCity = useMemo(
+    () => (Array.isArray(result.journals) ? result.journals : []),
+    [result.journals],
+  );
   const journals = useMemo(
     () => allForCity.filter((j) => journalMatchesDateRange(j, dateFrom, dateTo)),
     [allForCity, dateFrom, dateTo],
