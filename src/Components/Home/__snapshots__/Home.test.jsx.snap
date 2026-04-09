@@ -58,8 +58,10 @@ exports[`Homepage > matches snapshot 1`] = `
       <div
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
       >
-        <div
-          class="bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center"
+        <a
+          class="block bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center hover:-translate-y-1 transform"
+          data-discover="true"
+          href="/map"
         >
           <div
             class="text-3xl mb-3"
@@ -76,9 +78,11 @@ exports[`Homepage > matches snapshot 1`] = `
           >
             Mark the places you've been on a beautiful, interactive world map.
           </p>
-        </div>
-        <div
-          class="bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center"
+        </a>
+        <a
+          class="block bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center hover:-translate-y-1 transform"
+          data-discover="true"
+          href="/"
         >
           <div
             class="text-3xl mb-3"
@@ -95,9 +99,11 @@ exports[`Homepage > matches snapshot 1`] = `
           >
             Write about your experiences and memories from every destination.
           </p>
-        </div>
-        <div
-          class="bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center"
+        </a>
+        <a
+          class="block bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center hover:-translate-y-1 transform"
+          data-discover="true"
+          href="/"
         >
           <div
             class="text-3xl mb-3"
@@ -114,9 +120,11 @@ exports[`Homepage > matches snapshot 1`] = `
           >
             See your complete journey at a glance — everywhere you've explored.
           </p>
-        </div>
-        <div
-          class="bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center"
+        </a>
+        <a
+          class="block bg-white border border-sand-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 text-center hover:-translate-y-1 transform"
+          data-discover="true"
+          href="/leaderboard"
         >
           <div
             class="text-3xl mb-3"
@@ -133,7 +141,7 @@ exports[`Homepage > matches snapshot 1`] = `
           >
             See how your travels stack up with leaderboards of the most visited places.
           </p>
-        </div>
+        </a>
       </div>
     </div>
     <div
