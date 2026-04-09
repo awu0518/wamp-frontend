@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getJournals, deleteJournal } from '../../services/api';
+import { getJournals, deleteJournal, getStoredToken } from '../../services/api';
 import JournalForm from './JournalForm';
 import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
 
@@ -18,7 +18,7 @@ export default function JournalPanel({
   const [deleteError, setDeleteError] = useState(null);
   const [editingJournal, setEditingJournal] = useState(null);
 
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!getStoredToken();
   const loading = isLoggedIn && result.journals === null && !result.error;
 
   useEffect(() => {

@@ -8,6 +8,7 @@ vi.mock('../../services/api', () => ({
   createJournal: vi.fn(),
   updateJournal: vi.fn(),
   deleteJournal: vi.fn(),
+  getStoredToken: vi.fn(() => localStorage.getItem('token')),
 }))
 
 import { getJournals, updateJournal, deleteJournal } from '../../services/api'
