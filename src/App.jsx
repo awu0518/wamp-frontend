@@ -9,6 +9,7 @@ import Map from './Components/Map/Map'
 import About from './Components/About'
 import History from './Components/History'
 import LeaderBoard from './Components/LeaderBoard'
+import { getStoredToken } from './services/api'
 
 
 // function History() {
@@ -17,10 +18,6 @@ import LeaderBoard from './Components/LeaderBoard'
 
 // Pages that need the full viewport (no flex centering applied by the shell)
 const FULL_BLEED_ROUTES = ['/map', '/about', '/leaderboard'];
-
-function TestLeaderboard() {
-  return <div style={{ color: "black", fontSize: "40px", padding: "40px" }}>Inline route works</div>;
-}
 
 function App() {
   const location = useLocation();
@@ -41,7 +38,7 @@ function App() {
           <Route
             path="/history"
             element={
-              localStorage.getItem("token")
+              getStoredToken()
                 ? <History />
                 : <Navigate to="/login" replace />
             }

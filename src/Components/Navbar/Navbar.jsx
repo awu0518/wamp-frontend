@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { getStoredToken } from "../../services/api";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/map", label: "Map" },
-  { to: "/leaderboard", label: "Leader Board" },
+  { to: "/leaderboard", label: "Leaderboard" },
 ];
 
 function Navbar() {
@@ -13,7 +14,7 @@ function Navbar() {
 
   const navigate = useNavigate();
 
-  const isLoggedIn = Boolean(localStorage.getItem("token"));
+  const isLoggedIn = Boolean(getStoredToken());
 
   const handleLogout = () => {
     localStorage.removeItem("token");
