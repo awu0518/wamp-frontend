@@ -26,76 +26,100 @@ const stateNameToCode = { Texas: 'TX', 'New York': 'NY' };
 
 describe('hasLocationFilter', () => {
   it('is false when all empty', () => {
-    expect(hasLocationFilter('', '', '')).toBe(false);
+    expect(hasLocationFilter('', new Set(), new Set())).toBe(false);
   });
 
   it('is true when country is set', () => {
-    expect(hasLocationFilter('US', '', '')).toBe(true);
+    expect(hasLocationFilter('US', new Set(), new Set())).toBe(true);
   });
 
-  it('is true when state is set', () => {
-    expect(hasLocationFilter('', 'Texas', '')).toBe(true);
+  it('is true when stateNames Set has entries', () => {
+    expect(hasLocationFilter('', new Set(['Texas']), new Set())).toBe(true);
   });
 
-  it('is true when city is set', () => {
-    expect(hasLocationFilter('', '', 'Austin')).toBe(true);
+  it('is true when cityNames Set has entries', () => {
+    expect(hasLocationFilter('', new Set(), new Set(['Austin']))).toBe(true);
   });
 
-  it('is false for whitespace-only values', () => {
-    expect(hasLocationFilter('  ', '\t', '')).toBe(false);
+  it('is false for whitespace-only country and empty Sets', () => {
+    expect(hasLocationFilter('  ', new Set(), new Set())).toBe(false);
   });
 });
 
 describe('filterJournalsByLocation', () => {
   it('returns the same list when no geo filters', () => {
     expect(
-      filterJournalsByLocation(journals, { countryIso: '', stateName: '', cityName: '' }, {}),
+      filterJournalsByLocation(
+        journals,
+        { countryIso: '', stateNames: new Set(), cityNames: new Set() },
+        stateNameToCode,
+      ),
     ).toEqual(journals);
   });
 
   it('filters by country ISO', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: 'FR', stateName: '', cityName: '' },
+      { countryIso: 'FR', stateNames: new Set(), cityNames: new Set() },
       stateNameToCode,
     );
     expect(out).toHaveLength(1);
     expect(out[0].location_name).toBe('Paris');
   });
 
-  it('filters by state name using stateNameToCode', () => {
+  it('filters by a single state name using stateNameToCode', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: '', stateName: 'Texas', cityName: '' },
+      { countryIso: '', stateNames: new Set(['Texas']), cityNames: new Set() },
       stateNameToCode,
     );
     expect(out).toHaveLength(1);
     expect(out[0].location_name).toBe('Austin');
   });
 
-  it('does not filter by state when state name is missing from map', () => {
+  it('filters by multiple state names', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: '', stateName: 'Unknown State', cityName: '' },
+      { countryIso: '', stateNames: new Set(['Texas', 'New York']), cityNames: new Set() },
       stateNameToCode,
     );
-    expect(out).toEqual(journals);
+    expect(out).toHaveLength(2);
+    expect(out.map((j) => j.location_name).sort()).toEqual(['Austin', 'New York']);
   });
 
-  it('filters by city name', () => {
+  it('returns empty when state name is missing from stateNameToCode map', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: '', stateName: '', cityName: 'New York' },
+      { countryIso: '', stateNames: new Set(['Unknown State']), cityNames: new Set() },
+      stateNameToCode,
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('filters by a single city name', () => {
+    const out = filterJournalsByLocation(
+      journals,
+      { countryIso: '', stateNames: new Set(), cityNames: new Set(['New York']) },
       stateNameToCode,
     );
     expect(out).toHaveLength(1);
     expect(out[0].state_code).toBe('NY');
   });
 
+  it('filters by multiple city names', () => {
+    const out = filterJournalsByLocation(
+      journals,
+      { countryIso: '', stateNames: new Set(), cityNames: new Set(['New York', 'Austin']) },
+      stateNameToCode,
+    );
+    expect(out).toHaveLength(2);
+    expect(out.map((j) => j.location_name).sort()).toEqual(['Austin', 'New York']);
+  });
+
   it('chains country then state then city', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: 'US', stateName: 'Texas', cityName: 'Austin' },
+      { countryIso: 'US', stateNames: new Set(['Texas']), cityNames: new Set(['Austin']) },
       stateNameToCode,
     );
     expect(out).toHaveLength(1);
@@ -105,7 +129,7 @@ describe('filterJournalsByLocation', () => {
   it('returns empty when country excludes all', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: 'DE', stateName: '', cityName: '' },
+      { countryIso: 'DE', stateNames: new Set(), cityNames: new Set() },
       stateNameToCode,
     );
     expect(out).toEqual([]);
@@ -114,7 +138,7 @@ describe('filterJournalsByLocation', () => {
   it('trims geo string values', () => {
     const out = filterJournalsByLocation(
       journals,
-      { countryIso: '  US  ', stateName: '', cityName: '' },
+      { countryIso: '  US  ', stateNames: new Set(), cityNames: new Set() },
       stateNameToCode,
     );
     expect(out).toHaveLength(2);

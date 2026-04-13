@@ -1,5 +1,5 @@
 export default function StateSidebar({
-  selectedState,
+  selectedStates,
   cities,
   citiesLoading,
   citiesError,
@@ -14,19 +14,23 @@ export default function StateSidebar({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <span className="text-xs bg-forest-100 text-forest-800 px-2.5 py-1 rounded-full font-medium">
-              State
+              {selectedStates.length === 1 ? 'State' : `${selectedStates.length} States`}
             </span>
-            <h3 className="text-xl font-bold mt-2 text-ocean-900">
-              {selectedState.name}
-            </h3>
-            {selectedState.capital && (
-              <p className="text-sm text-neutral-500 mt-0.5">
-                Capital: {selectedState.capital}
-              </p>
-            )}
-            <p className="text-xs text-neutral-400 mt-1 font-mono">
-              {selectedState.code}
-            </p>
+            {selectedStates.map((s) => (
+              <div key={s.code} className="mt-2">
+                <h3 className="text-lg font-bold text-ocean-900 leading-tight">
+                  {s.name}
+                </h3>
+                {s.capital && (
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Capital: {s.capital}
+                  </p>
+                )}
+                <p className="text-xs text-neutral-400 font-mono">
+                  {s.code}
+                </p>
+              </div>
+            ))}
           </div>
           <button
             onClick={onClose}
@@ -67,7 +71,7 @@ export default function StateSidebar({
           <div className="flex items-start gap-2 bg-sand-100 border border-sand-200 rounded-lg p-3">
             <span className="text-sand-500 text-sm leading-none mt-0.5">ℹ</span>
             <p className="text-xs text-sand-500">
-              No cities found for {selectedState.name}.
+              No cities found for the selected {selectedStates.length === 1 ? 'state' : 'states'}.
             </p>
           </div>
         )}

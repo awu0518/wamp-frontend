@@ -110,8 +110,8 @@ describe('Map — location filter UI', () => {
     const filterRow = screen.getByText('Filter by location').closest('div');
     expect(filterRow.querySelectorAll('select')).toHaveLength(3);
     expect(screen.getByText('Country')).toBeInTheDocument();
-    expect(screen.getByText('State')).toBeInTheDocument();
-    expect(screen.getByText('City')).toBeInTheDocument();
+    expect(screen.getByText('States')).toBeInTheDocument();
+    expect(screen.getByText('Cities')).toBeInTheDocument();
   });
 
   it('lists countries from GET /countries in the country select', async () => {
@@ -144,18 +144,39 @@ describe('Map — location filter UI', () => {
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
-    const [countrySelect, stateSelect] = screen
-      .getByText('Filter by location')
-      .closest('div')
-      .querySelectorAll('select');
-
+    const stateSelect = screen.getByText('States').closest('div').querySelector('select');
     expect(stateSelect.disabled).toBe(true);
 
+    const countrySelect = screen.getByText('Country').parentElement.querySelector('select');
     fireEvent.change(countrySelect, { target: { value: 'US' } });
 
     await waitFor(() => {
       expect(stateSelect.disabled).toBe(false);
       expect([...stateSelect.options].some((o) => o.value === 'Texas')).toBe(true);
+    });
+  });
+
+  it('adds a state chip when a state is selected from the dropdown', async () => {
+    render(<Map />);
+
+    await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
+
+    const countrySelect = screen.getByText('Country').parentElement.querySelector('select');
+    fireEvent.change(countrySelect, { target: { value: 'US' } });
+
+    await waitFor(() => {
+      const stateSelect = screen.getByText('States').closest('div').querySelector('select');
+      expect(stateSelect.disabled).toBe(false);
+    });
+
+    const stateSelect = screen.getByText('States').closest('div').querySelector('select');
+    fireEvent.change(stateSelect, { target: { value: 'Texas' } });
+
+    await waitFor(() => {
+      const matches = screen.getAllByText('Texas');
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+      const chip = matches.find((el) => el.closest('.inline-flex'));
+      expect(chip).toBeTruthy();
     });
   });
 

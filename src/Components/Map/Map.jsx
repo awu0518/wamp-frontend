@@ -119,31 +119,35 @@ export default function Map() {
   };
 
   // ── Cities (GET /cities/search) ────────────────────────────────────────
-  const [selectedState, setSelectedState] = useState(null);
+  const [selectedStates, setSelectedStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [cityStateCode, setCityStateCode] = useState({});
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [citiesError, setCitiesError] = useState(null);
 
-  const loadCities = (stateName) => {
-    const code = stateNameToCode[stateName];
-    if (!code) return;
-    setSelectedState({
-      name: stateName,
-      code,
-      capital: stateCapitals[stateName] || '',
-    });
-    setSelectedCity(null);
+  const loadCitiesForStates = useCallback((stateNameSet) => {
+    const entries = [...stateNameSet]
+      .map((n) => ({ name: n, code: stateNameToCode[n], capital: stateCapitals[n] || '' }))
+      .filter((e) => e.code);
+    setSelectedStates(entries);
     setCities([]);
+    setCityStateCode({});
     setCitiesError(null);
+    if (entries.length === 0) { setCitiesLoading(false); return; }
     setCitiesLoading(true);
-    searchCities({ state_code: code })
-      .then((data) => {
-        const raw = data.cities || {};
-        setCities(Object.keys(raw).sort());
+    Promise.all(entries.map((e) => searchCities({ state_code: e.code }).then((d) => ({ code: e.code, cities: d.cities || {} }))))
+      .then((results) => {
+        const merged = new Set();
+        const codeMap = {};
+        results.forEach(({ code, cities: raw }) => {
+          Object.keys(raw).forEach((c) => { merged.add(c); codeMap[c] = code; });
+        });
+        setCities([...merged].sort());
+        setCityStateCode(codeMap);
       })
       .catch((err) => setCitiesError(err.message))
       .finally(() => setCitiesLoading(false));
-  };
+  }, [stateNameToCode, stateCapitals]);
 
   // ── Journals (GET /journals) — raw list + date filter + aggregation ─────
   const [rawJournals, setRawJournals] = useState([]);
@@ -183,15 +187,15 @@ export default function Map() {
     refreshJournalCounts();
   }, [refreshJournalCounts]);
 
-  // ── Location filter (country / state / city) — narrows journals + syncs with map ──
+  // ── Location filter (country / states / cities) — narrows journals + syncs with map ──
   const [geoFilterCountry, setGeoFilterCountry] = useState('');
-  const [geoFilterStateName, setGeoFilterStateName] = useState('');
-  const [geoFilterCity, setGeoFilterCity] = useState('');
+  const [geoFilterStateNames, setGeoFilterStateNames] = useState(new Set());
+  const [geoFilterCities, setGeoFilterCities] = useState(new Set());
 
   const locationFilterActive = hasLocationFilter(
     geoFilterCountry,
-    geoFilterStateName,
-    geoFilterCity,
+    geoFilterStateNames,
+    geoFilterCities,
   );
 
   const filteredJournals = useMemo(() => {
@@ -202,8 +206,8 @@ export default function Map() {
       dateFiltered,
       {
         countryIso: geoFilterCountry,
-        stateName: geoFilterStateName,
-        cityName: geoFilterCity,
+        stateNames: geoFilterStateNames,
+        cityNames: geoFilterCities,
       },
       stateNameToCode,
     );
@@ -212,8 +216,8 @@ export default function Map() {
     dateFrom,
     dateTo,
     geoFilterCountry,
-    geoFilterStateName,
-    geoFilterCity,
+    geoFilterStateNames,
+    geoFilterCities,
     stateNameToCode,
   ]);
 
@@ -261,8 +265,8 @@ export default function Map() {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
     if (alpha2 === 'US') {
       setGeoFilterCountry('US');
-      setGeoFilterStateName('');
-      setGeoFilterCity('');
+      setGeoFilterStateNames(new Set());
+      setGeoFilterCities(new Set());
       setSelectedCity(null);
       setView('us');
       loadStates();
@@ -273,25 +277,36 @@ export default function Map() {
   const handleStateClick = (geo) => {
     const name = geo.properties.name;
     if (stateNames.has(name)) {
-      setGeoFilterStateName(name);
-      setGeoFilterCity('');
+      setGeoFilterStateNames((prev) => {
+        const next = new Set(prev);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        loadCitiesForStates(next);
+        return next;
+      });
+      setGeoFilterCities(new Set());
       setSelectedCity(null);
-      loadCities(name);
     }
   };
 
   const handleCityClick = (cityName) => {
     setSelectedCity(cityName);
-    setGeoFilterCity(cityName);
+    setGeoFilterCities((prev) => {
+      const next = new Set(prev);
+      if (next.has(cityName)) next.delete(cityName);
+      else next.add(cityName);
+      return next;
+    });
   };
 
   const clearLocationFilters = useCallback(() => {
     setGeoFilterCountry('');
-    setGeoFilterStateName('');
-    setGeoFilterCity('');
-    setSelectedState(null);
+    setGeoFilterStateNames(new Set());
+    setGeoFilterCities(new Set());
+    setSelectedStates([]);
     setSelectedCity(null);
     setCities([]);
+    setCityStateCode({});
     setView('world');
   }, []);
 
@@ -310,11 +325,12 @@ export default function Map() {
 
   const onLocationCountryChange = (iso) => {
     setGeoFilterCountry(iso);
-    setGeoFilterStateName('');
-    setGeoFilterCity('');
-    setSelectedState(null);
+    setGeoFilterStateNames(new Set());
+    setGeoFilterCities(new Set());
+    setSelectedStates([]);
     setSelectedCity(null);
     setCities([]);
+    setCityStateCode({});
     if (iso === 'US') {
       setView('us');
       loadStates();
@@ -324,20 +340,25 @@ export default function Map() {
     }
   };
 
-  const onLocationStateChange = (stateName) => {
-    setGeoFilterStateName(stateName);
-    setGeoFilterCity('');
+  const toggleFilterState = (stateName) => {
+    setGeoFilterStateNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(stateName)) next.delete(stateName);
+      else next.add(stateName);
+      loadCitiesForStates(next);
+      return next;
+    });
+    setGeoFilterCities(new Set());
     setSelectedCity(null);
-    if (!stateName) {
-      setSelectedState(null);
-      setCities([]);
-    } else {
-      loadCities(stateName);
-    }
   };
 
-  const onLocationCityChange = (cityName) => {
-    setGeoFilterCity(cityName);
+  const toggleFilterCity = (cityName) => {
+    setGeoFilterCities((prev) => {
+      const next = new Set(prev);
+      if (next.has(cityName)) next.delete(cityName);
+      else next.add(cityName);
+      return next;
+    });
     setSelectedCity(cityName || null);
   };
 
@@ -420,7 +441,7 @@ export default function Map() {
           )}
         </div>
 
-        {/* Location filter — country / state / city */}
+        {/* Location filter — country / states / cities */}
         <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-forest-200 bg-forest-50/50 px-3 py-2.5 text-xs text-neutral-700">
           <span className="font-semibold text-forest-900 whitespace-nowrap">Filter by location</span>
           <label className="flex items-center gap-1.5">
@@ -439,40 +460,83 @@ export default function Map() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1.5">
-            <span className="text-neutral-500 shrink-0">State</span>
+
+          {/* Multi-select state picker */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">States</span>
             <select
-              value={geoFilterStateName}
-              onChange={(e) => onLocationStateChange(e.target.value)}
+              value=""
+              onChange={(e) => { if (e.target.value) toggleFilterState(e.target.value); }}
               disabled={view !== 'us' || !statesLoaded || statesLoading}
               className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8 max-w-44 sm:max-w-56 disabled:opacity-50"
-              title={view !== 'us' ? 'Open the United States map to choose a state' : undefined}
+              title={view !== 'us' ? 'Open the United States map to choose states' : undefined}
             >
-              <option value="">All states</option>
-              {sortedStateNames.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
+              <option value="">{geoFilterStateNames.size ? 'Add state…' : 'All states'}</option>
+              {sortedStateNames
+                .filter((n) => !geoFilterStateNames.has(n))
+                .map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
             </select>
-          </label>
-          <label className="flex items-center gap-1.5">
-            <span className="text-neutral-500 shrink-0">City</span>
+          </div>
+          {geoFilterStateNames.size > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {[...geoFilterStateNames].sort().map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex items-center gap-1 bg-forest-100 text-forest-800 pl-2 pr-1 py-0.5 rounded-full text-xs font-medium"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => toggleFilterState(name)}
+                    className="text-forest-600 hover:text-forest-900 leading-none"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Multi-select city picker */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-neutral-500 shrink-0">Cities</span>
             <select
-              value={geoFilterCity}
-              onChange={(e) => onLocationCityChange(e.target.value)}
-              disabled={!selectedState || citiesLoading}
+              value=""
+              onChange={(e) => { if (e.target.value) toggleFilterCity(e.target.value); }}
+              disabled={selectedStates.length === 0 || citiesLoading}
               className="border border-sand-200 rounded-md px-2 py-1.5 text-neutral-800 bg-white text-xs min-h-8 max-w-44 sm:max-w-64 disabled:opacity-50"
-              title={!selectedState ? 'Choose a state first' : undefined}
+              title={selectedStates.length === 0 ? 'Choose a state first' : undefined}
             >
-              <option value="">All cities</option>
-              {cities.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
+              <option value="">{geoFilterCities.size ? 'Add city…' : 'All cities'}</option>
+              {cities
+                .filter((n) => !geoFilterCities.has(n))
+                .map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
             </select>
-          </label>
+          </div>
+          {geoFilterCities.size > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {[...geoFilterCities].sort().map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex items-center gap-1 bg-ocean-100 text-ocean-800 pl-2 pr-1 py-0.5 rounded-full text-xs font-medium"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => toggleFilterCity(name)}
+                    className="text-ocean-600 hover:text-ocean-900 leading-none"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           {locationFilterActive && (
             <button
               type="button"
@@ -538,7 +602,7 @@ export default function Map() {
               stateNameToCode={stateNameToCode}
               journalCounts={journalCounts.byState}
               heatmapCounts={heatmapCounts.byState}
-              selectedStateName={selectedState?.name || null}
+              selectedStateNames={geoFilterStateNames}
               hoveredId={hoveredId}
               onHover={setHoveredId}
               onLeave={() => setHoveredId(null)}
@@ -567,34 +631,34 @@ export default function Map() {
         </div>
 
         {/* ── State sidebar ────────────────────────────────────────────── */}
-        {view === 'us' && selectedState && (
+        {view === 'us' && selectedStates.length > 0 && (
           <StateSidebar
-            selectedState={selectedState}
+            selectedStates={selectedStates}
             cities={cities}
             citiesLoading={citiesLoading}
             citiesError={citiesError}
             journalCounts={journalCounts.byCity}
             onClose={() => {
-              setGeoFilterStateName('');
-              setGeoFilterCity('');
-              setSelectedState(null);
+              setGeoFilterStateNames(new Set());
+              setGeoFilterCities(new Set());
+              setSelectedStates([]);
               setSelectedCity(null);
               setCities([]);
+              setCityStateCode({});
             }}
             onCityClick={handleCityClick}
           />
         )}
 
         {/* ── Journal panel (appears when a city is clicked) ───────────── */}
-        {view === 'us' && selectedState && selectedCity && (
+        {view === 'us' && selectedStates.length > 0 && selectedCity && (
           <JournalPanel
             city={selectedCity}
-            stateCode={selectedState.code}
+            stateCode={cityStateCode[selectedCity] || selectedStates[0]?.code}
             dateFrom={dateFrom}
             dateTo={dateTo}
             onClose={() => {
               setSelectedCity(null);
-              setGeoFilterCity('');
             }}
             onJournalAdded={refreshJournalCounts}
           />
@@ -652,7 +716,7 @@ export default function Map() {
                 0 → many journals ({totalStates} states)
               </span>
             </div>
-            {selectedState && (
+            {geoFilterStateNames.size > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: STATE_SELECTED }} />
                 <span className="text-neutral-600">Selected state</span>

@@ -1,36 +1,40 @@
 /**
- * Map journal list filtering by country ISO, US state name, and city name.
+ * Map journal list filtering by country ISO, US state names (Set), and city names (Set).
  * stateNameToCode maps API state display names to state_code (e.g. "Texas" -> "TX").
  */
 
-export function hasLocationFilter(countryIso, stateName, cityName) {
+export function hasLocationFilter(countryIso, stateNames, cityNames) {
   return Boolean(
     (countryIso && String(countryIso).trim()) ||
-      (stateName && String(stateName).trim()) ||
-      (cityName && String(cityName).trim()),
+      (stateNames instanceof Set ? stateNames.size > 0 : stateNames && String(stateNames).trim()) ||
+      (cityNames instanceof Set ? cityNames.size > 0 : cityNames && String(cityNames).trim()),
   );
 }
 
 /**
  * @param {Array<object>} journals
- * @param {{ countryIso?: string, stateName?: string, cityName?: string }} geo
+ * @param {{ countryIso?: string, stateNames?: Set<string>, cityNames?: Set<string> }} geo
  * @param {Record<string, string>} stateNameToCode
  */
 export function filterJournalsByLocation(journals, geo, stateNameToCode) {
   const countryIso = geo.countryIso?.trim() || '';
-  const stateName = geo.stateName?.trim() || '';
-  const cityName = geo.cityName?.trim() || '';
+  const stateNames = geo.stateNames || new Set();
+  const cityNames = geo.cityNames || new Set();
 
   let list = journals;
   if (countryIso) {
     list = list.filter((j) => j.iso_code === countryIso);
   }
-  if (stateName) {
-    const code = stateNameToCode[stateName];
-    if (code) list = list.filter((j) => j.state_code === code);
+  if (stateNames.size > 0) {
+    const codes = new Set();
+    stateNames.forEach((n) => {
+      const c = stateNameToCode[n];
+      if (c) codes.add(c);
+    });
+    list = list.filter((j) => codes.has(j.state_code));
   }
-  if (cityName) {
-    list = list.filter((j) => j.location_name === cityName);
+  if (cityNames.size > 0) {
+    list = list.filter((j) => cityNames.has(j.location_name));
   }
   return list;
 }

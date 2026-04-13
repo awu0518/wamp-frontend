@@ -9,7 +9,7 @@ export default function USMap({
   stateNameToCode,
   journalCounts,
   heatmapCounts,
-  selectedStateName,
+  selectedStateNames,
   hoveredId,
   onHover,
   onLeave,
@@ -38,7 +38,7 @@ export default function USMap({
     const inDB = stateNames.has(name);
     const hovered = hoveredId === geo.id;
     if (!inDB) return hovered ? COLOR.stateOutHov : COLOR.stateOut;
-    if (selectedStateName === name) return hovered ? STATE_SELECTED_HOV : STATE_SELECTED;
+    if (selectedStateNames?.has(name)) return hovered ? STATE_SELECTED_HOV : STATE_SELECTED;
     const code = stateNameToCode[name];
     const count = code ? (heat[code] || 0) : 0;
     const scale = hovered ? STATE_HEAT_HOV : STATE_HEAT;
