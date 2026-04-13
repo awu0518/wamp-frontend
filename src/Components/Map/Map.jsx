@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { geoEqualEarth, geoAlbersUsa, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { getCountries, getStates, searchCities, getJournals, getStoredToken } from '../../services/api';
-import { COLOR, NUMERIC_TO_ALPHA2 } from './mapConstants';
+import { COLOR, NUMERIC_TO_ALPHA2, STATE_HEAT, COUNTRY_HEAT, STATE_SELECTED } from './mapConstants';
 import { journalMatchesDateRange, hasJournalDateFilter } from './journalDateFilter';
 import { filterJournalsByLocation, hasLocationFilter } from './journalLocationFilter';
 import WorldMap from './WorldMap';
@@ -228,6 +228,21 @@ export default function Map() {
     });
     return { byCity, byState, byCountry };
   }, [filteredJournals]);
+
+  // Heatmap counts: date-filtered only (ignores location filter so all
+  // states/countries keep their shading when one is selected).
+  const heatmapCounts = useMemo(() => {
+    const dateOnly = rawJournals.filter((j) =>
+      journalMatchesDateRange(j, dateFrom, dateTo),
+    );
+    const byState = {};
+    const byCountry = {};
+    dateOnly.forEach((j) => {
+      if (j.state_code) byState[j.state_code] = (byState[j.state_code] || 0) + 1;
+      if (j.iso_code) byCountry[j.iso_code] = (byCountry[j.iso_code] || 0) + 1;
+    });
+    return { byState, byCountry };
+  }, [rawJournals, dateFrom, dateTo]);
 
   // ── Tooltip ────────────────────────────────────────────────────────────
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
@@ -503,6 +518,7 @@ export default function Map() {
               countryIsoCodes={countryIsoCodes}
               isoToName={isoToName}
               journalCounts={journalCounts.byCountry}
+              heatmapCounts={heatmapCounts.byCountry}
               hoveredId={hoveredId}
               onHover={setHoveredId}
               onLeave={() => setHoveredId(null)}
@@ -521,6 +537,8 @@ export default function Map() {
               stateCapitals={stateCapitals}
               stateNameToCode={stateNameToCode}
               journalCounts={journalCounts.byState}
+              heatmapCounts={heatmapCounts.byState}
+              selectedStateName={selectedState?.name || null}
               hoveredId={hoveredId}
               onHover={setHoveredId}
               onLeave={() => setHoveredId(null)}
@@ -588,16 +606,22 @@ export default function Map() {
         {view === 'world' ? (
           <>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.countryIn }} />
-              <span className="text-neutral-600">In database ({totalCountries})</span>
+              <div className="w-3.5 h-3.5 rounded-sm bg-sand-200" />
+              <span className="text-neutral-600">Not in database</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.countryUSA }} />
               <span className="text-neutral-600">USA — click to drill in</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm bg-sand-200" />
-              <span className="text-neutral-600">Not in database</span>
+            <div className="flex items-center gap-2">
+              <div className="flex h-3.5 rounded-sm overflow-hidden">
+                {COUNTRY_HEAT.map((c) => (
+                  <div key={c} className="w-3.5" style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <span className="text-neutral-600">
+                In database ({totalCountries}) — darker = more journals
+              </span>
             </div>
             {isLoggedIn && totalJournals > 0 && (
               <div className="flex items-center gap-1.5">
@@ -615,13 +639,25 @@ export default function Map() {
         ) : (
           <>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.stateIn }} />
-              <span className="text-neutral-600">In database ({totalStates})</span>
-            </div>
-            <div className="flex items-center gap-1.5">
               <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLOR.stateOut }} />
               <span className="text-neutral-600">Not in database</span>
             </div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-3.5 rounded-sm overflow-hidden">
+                {STATE_HEAT.map((c, i) => (
+                  <div key={i} className="w-3.5" style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <span className="text-neutral-600">
+                0 → many journals ({totalStates} states)
+              </span>
+            </div>
+            {selectedState && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: STATE_SELECTED }} />
+                <span className="text-neutral-600">Selected state</span>
+              </div>
+            )}
             {isLoggedIn && totalJournals > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLOR.badge }} />

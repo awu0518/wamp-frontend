@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { W_W, W_H, COLOR, NUMERIC_TO_ALPHA2 } from './mapConstants';
+import { W_W, W_H, COLOR, NUMERIC_TO_ALPHA2, COUNTRY_HEAT, COUNTRY_HEAT_HOV, heatColor } from './mapConstants';
 
 export default function WorldMap({
   features,
@@ -7,6 +7,7 @@ export default function WorldMap({
   countryIsoCodes,
   isoToName,
   journalCounts,
+  heatmapCounts,
   hoveredId,
   onHover,
   onLeave,
@@ -24,14 +25,22 @@ export default function WorldMap({
     return map;
   }, [features, path]);
 
+  const heat = heatmapCounts || journalCounts;
+  const maxJournals = useMemo(() => {
+    const vals = Object.values(heat);
+    return vals.length ? Math.max(...vals) : 0;
+  }, [heat]);
+
   const getFill = (geo) => {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
     const hovered = hoveredId === geo.id;
     if (!alpha2) return hovered ? COLOR.countryOutHov : COLOR.countryOut;
     if (alpha2 === 'US') return hovered ? COLOR.countryUSAHov : COLOR.countryUSA;
-    if (countryIsoCodes.has(alpha2))
-      return hovered ? COLOR.countryInHov : COLOR.countryIn;
-    return hovered ? COLOR.countryOutHov : COLOR.countryOut;
+    if (!countryIsoCodes.has(alpha2))
+      return hovered ? COLOR.countryOutHov : COLOR.countryOut;
+    const count = heat[alpha2] || 0;
+    const scale = hovered ? COUNTRY_HEAT_HOV : COUNTRY_HEAT;
+    return heatColor(scale, count, maxJournals);
   };
 
   if (!features) return null;

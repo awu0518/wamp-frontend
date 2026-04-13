@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { US_W, US_H, COLOR } from './mapConstants';
+import { US_W, US_H, COLOR, STATE_HEAT, STATE_HEAT_HOV, STATE_SELECTED, STATE_SELECTED_HOV, heatColor } from './mapConstants';
 
 export default function USMap({
   features,
@@ -8,6 +8,8 @@ export default function USMap({
   stateCapitals,
   stateNameToCode,
   journalCounts,
+  heatmapCounts,
+  selectedStateName,
   hoveredId,
   onHover,
   onLeave,
@@ -25,11 +27,22 @@ export default function USMap({
     return map;
   }, [features, path]);
 
+  const heat = heatmapCounts || journalCounts;
+  const maxJournals = useMemo(() => {
+    const vals = Object.values(heat);
+    return vals.length ? Math.max(...vals) : 0;
+  }, [heat]);
+
   const getFill = (geo) => {
-    const inDB = stateNames.has(geo.properties.name);
+    const name = geo.properties.name;
+    const inDB = stateNames.has(name);
     const hovered = hoveredId === geo.id;
-    if (inDB) return hovered ? COLOR.stateInHov : COLOR.stateIn;
-    return hovered ? COLOR.stateOutHov : COLOR.stateOut;
+    if (!inDB) return hovered ? COLOR.stateOutHov : COLOR.stateOut;
+    if (selectedStateName === name) return hovered ? STATE_SELECTED_HOV : STATE_SELECTED;
+    const code = stateNameToCode[name];
+    const count = code ? (heat[code] || 0) : 0;
+    const scale = hovered ? STATE_HEAT_HOV : STATE_HEAT;
+    return heatColor(scale, count, maxJournals);
   };
 
   if (!features || !path) return null;

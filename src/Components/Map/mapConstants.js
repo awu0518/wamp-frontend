@@ -20,6 +20,47 @@ export const COLOR = {
   badgeText:     '#FFFFFF',
 };
 
+// Heatmap: 5 stops — [0] = 0 journals, [1]-[4] = increasing intensity.
+export const STATE_HEAT     = ['#3D7A50', '#347048', '#2A5738', '#1E4430', '#173020'];
+export const STATE_HEAT_HOV = ['#2A5738', '#234A30', '#1B3D26', '#142E1E', '#0F2416'];
+
+export const COUNTRY_HEAT     = ['#2478A0', '#1C6487', '#14506E', '#0F3D55', '#0B3345'];
+export const COUNTRY_HEAT_HOV = ['#0B3345', '#092938', '#081F2B', '#061A23', '#04111A'];
+
+// Selected-state highlight (uses ocean palette so it clearly stands out)
+export const STATE_SELECTED     = '#14506E';  // ocean-800
+export const STATE_SELECTED_HOV = '#0B3345';  // ocean-900
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function parseHex(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function toHex(r, g, b) {
+  return '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Pick a fill from a 5-stop gradient.
+ *   count === 0         → scale[0]
+ *   count  > 0          → interpolate across scale[1]…scale[4]
+ *   count >= maxCount   → scale[4]
+ */
+export function heatColor(scale, count, maxCount) {
+  if (!count || maxCount <= 0) return scale[0];
+  const last = scale.length - 1;
+  const t = Math.min(count / maxCount, 1);
+  const pos = 1 + t * (last - 1);
+  const lo = Math.floor(pos);
+  const hi = Math.min(lo + 1, last);
+  const frac = pos - lo;
+  const [r1, g1, b1] = parseHex(scale[lo]);
+  const [r2, g2, b2] = parseHex(scale[hi]);
+  return toHex(lerp(r1, r2, frac), lerp(g1, g2, frac), lerp(b1, b2, frac));
+}
+
 export const NUMERIC_TO_ALPHA2 = {
   4:'AF',8:'AL',12:'DZ',20:'AD',24:'AO',28:'AG',31:'AZ',32:'AR',
   36:'AU',40:'AT',44:'BS',48:'BH',50:'BD',51:'AM',52:'BB',56:'BE',
