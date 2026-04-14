@@ -179,7 +179,7 @@ export default function History() {
             const id = j._id ?? j.id;
             const when = j.visited_at ?? j.visit_date ?? j.date ?? j.created_at;
             const title = j.title ?? j.location_name ?? "Journal Entry";
-            const loc = [j.city, j.state, j.country].filter(Boolean).join(", ");
+            const loc = [j.location_name, j.state_code, j.iso_code].filter(Boolean).join(", ");
 
             return (
               <div
