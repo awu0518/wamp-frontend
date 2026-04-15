@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { getStoredToken } from "../../services/api";
+import { getStoredToken, logout } from "../../services/api";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
@@ -17,7 +17,7 @@ function Navbar() {
   const isLoggedIn = Boolean(getStoredToken());
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     setMenuOpen(false);
     navigate("/login");
   };
