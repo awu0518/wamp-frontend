@@ -55,7 +55,7 @@ export default function USMap({
     >
       <rect width={US_W} height={US_H} fill="#EBF5FB" />
 
-      {features.map((geo) => {
+      {features.map((geo, idx) => {
         const name = geo.properties.name;
         const inDB = stateNames.has(name);
         const code = stateNameToCode[name];
@@ -69,7 +69,7 @@ export default function USMap({
 
         return (
           <path
-            key={geo.id}
+            key={geo.id ?? `${name}-${idx}`}
             d={path(geo)}
             fill={getFill(geo)}
             stroke={COLOR.stroke}
@@ -86,7 +86,7 @@ export default function USMap({
       })}
 
       {/* Journal count badges at state centroids */}
-      {features.map((geo) => {
+      {features.map((geo, idx) => {
         const code = stateNameToCode[geo.properties.name];
         const count = code ? (journalCounts[code] || 0) : 0;
         if (!count) return null;
@@ -94,7 +94,11 @@ export default function USMap({
         if (!c) return null;
         const r = count > 99 ? 12 : 10;
         return (
-          <g key={`jb-${geo.id}`} transform={`translate(${c[0]},${c[1]})`} style={{ pointerEvents: 'none' }}>
+          <g
+            key={`jb-${geo.id ?? `${geo.properties.name}-${idx}`}`}
+            transform={`translate(${c[0]},${c[1]})`}
+            style={{ pointerEvents: 'none' }}
+          >
             <circle r={r} fill={COLOR.badge} stroke={COLOR.badgeStroke} strokeWidth={1.5} />
             <text
               textAnchor="middle"

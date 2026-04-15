@@ -17,6 +17,10 @@ export function getStoredToken() {
   return tokenRaw && tokenRaw !== 'undefined' && tokenRaw !== 'null' ? tokenRaw : null;
 }
 
+export function logout() {
+  localStorage.removeItem('token');
+}
+
 // Helper
 // Core request function. Attaches JSON headers and auth token (if present).
 // Returns parsed JSON on success; throws on HTTP errors.
