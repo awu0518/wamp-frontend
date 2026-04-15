@@ -53,7 +53,7 @@ export default function WorldMap({
     >
       <rect width={W_W} height={W_H} fill="#EBF5FB" />
 
-      {features.map((geo) => {
+      {features.map((geo, idx) => {
         const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
         const inDB = alpha2 && countryIsoCodes.has(alpha2);
         const isUSA = alpha2 === 'US';
@@ -66,7 +66,7 @@ export default function WorldMap({
 
         return (
           <path
-            key={geo.id}
+            key={geo.id ?? `${alpha2 ?? 'na'}-${idx}`}
             d={path(geo)}
             fill={getFill(geo)}
             stroke={COLOR.stroke}
@@ -83,7 +83,7 @@ export default function WorldMap({
       })}
 
       {/* Journal count badges at country centroids */}
-      {features.map((geo) => {
+      {features.map((geo, idx) => {
         const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
         const count = alpha2 ? (journalCounts[alpha2] || 0) : 0;
         if (!count) return null;
@@ -91,7 +91,11 @@ export default function WorldMap({
         if (!c) return null;
         const r = count > 99 ? 10 : 8;
         return (
-          <g key={`jb-${geo.id}`} transform={`translate(${c[0]},${c[1]})`} style={{ pointerEvents: 'none' }}>
+          <g
+            key={`jb-${geo.id ?? `${alpha2 ?? 'na'}-${idx}`}`}
+            transform={`translate(${c[0]},${c[1]})`}
+            style={{ pointerEvents: 'none' }}
+          >
             <circle r={r} fill={COLOR.badge} stroke={COLOR.badgeStroke} strokeWidth={1.2} />
             <text
               textAnchor="middle"
