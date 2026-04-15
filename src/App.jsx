@@ -10,6 +10,7 @@ import About from './Components/About'
 import History from './Components/History'
 import LeaderBoard from './Components/LeaderBoard'
 import { getStoredToken } from './services/api'
+import DeveloperLogs from './Components/Developer'
 
 
 // function History() {
@@ -35,6 +36,7 @@ function App() {
           <Route path='/styleGuide' element={<StyleGuide />} />
           <Route path="/register" element={<Register />} />
           <Route path="/leaderboard" element={<LeaderBoard />} />
+          <Route path="/developer/logs" element={<DeveloperLogs />} />
           <Route
             path="/history"
             element={
