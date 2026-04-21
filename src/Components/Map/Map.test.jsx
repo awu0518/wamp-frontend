@@ -193,3 +193,133 @@ describe('Map — location filter UI', () => {
     });
   });
 });
+
+describe('Map — Reset all filters button', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url) => {
+        const u = String(url);
+        if (u.includes('world-atlas')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(minimalWorldTopo),
+          });
+        }
+        if (u.includes('us-atlas')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(minimalUsTopo),
+          });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  const getDateInputs = () => {
+    const fromInput = screen.getByText('From').parentElement.querySelector('input[type="date"]');
+    const toInput = screen.getByText('To').parentElement.querySelector('input[type="date"]');
+    return { fromInput, toInput };
+  };
+
+  it('is hidden when no date or location filter is active', async () => {
+    render(<Map />);
+
+    await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
+
+    expect(
+      screen.queryByRole('button', { name: /Reset all filters/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('appears when only a visit-date filter is active', async () => {
+    render(<Map />);
+
+    await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
+
+    const { fromInput } = getDateInputs();
+    fireEvent.change(fromInput, { target: { value: '2024-01-01' } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Reset all filters/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('appears when only a location filter is active', async () => {
+    render(<Map />);
+
+    await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
+
+    const countrySelect = screen.getByText('Country').parentElement.querySelector('select');
+    fireEvent.change(countrySelect, { target: { value: 'UT' } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Reset all filters/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('clears both date and location filters when clicked', async () => {
+    render(<Map />);
+
+    await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
+
+    const { fromInput, toInput } = getDateInputs();
+    fireEvent.change(fromInput, { target: { value: '2024-01-01' } });
+    fireEvent.change(toInput, { target: { value: '2024-12-31' } });
+
+    const countrySelect = screen.getByText('Country').parentElement.querySelector('select');
+    fireEvent.change(countrySelect, { target: { value: 'US' } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /United States/i })).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const stateSelect = screen.getByText('States').closest('div').querySelector('select');
+      expect(stateSelect.disabled).toBe(false);
+    });
+    const stateSelect = screen.getByText('States').closest('div').querySelector('select');
+    fireEvent.change(stateSelect, { target: { value: 'Texas' } });
+
+    await waitFor(() => {
+      const chip = screen
+        .getAllByText('Texas')
+        .find((el) => el.closest('.inline-flex'));
+      expect(chip).toBeTruthy();
+    });
+
+    const resetBtn = screen.getByRole('button', { name: /Reset all filters/i });
+    fireEvent.click(resetBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: /Reset all filters/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    const { fromInput: fromAfter, toInput: toAfter } = getDateInputs();
+    expect(fromAfter.value).toBe('');
+    expect(toAfter.value).toBe('');
+
+    const countryAfter = screen.getByText('Country').parentElement.querySelector('select');
+    expect(countryAfter.value).toBe('');
+
+    expect(
+      screen.getByRole('heading', { name: /Geographic Explorer/i }),
+    ).toBeInTheDocument();
+
+    const texasMatches = screen.queryAllByText('Texas');
+    const chipAfter = texasMatches.find((el) => el.closest('.inline-flex'));
+    expect(chipAfter).toBeFalsy();
+  });
+});

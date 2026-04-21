@@ -288,3 +288,7 @@ export function getLeaderboard() {
   return get('/leaderboard');
 }
 
+export function getDeveloperLogs(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return get(`/developer/logs${query ? `?${query}` : ''}`);
+}

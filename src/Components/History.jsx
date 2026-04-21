@@ -191,8 +191,12 @@ export default function History() {
                     <h3 className="text-lg font-semibold">{title}</h3>
                     <div className="text-sm text-neutral-500 mt-1">
                       {when ? new Date(when).toLocaleString() : "—"}
-                      {loc ? ` • ${loc}` : ""}
                     </div>
+                    {loc && (
+                      <div className="text-sm text-neutral-500">
+                        {loc}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2">
