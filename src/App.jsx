@@ -11,6 +11,7 @@ import History from './Components/History'
 import LeaderBoard from './Components/LeaderBoard'
 import { getStoredToken } from './services/api'
 import DeveloperLogs from './Components/Developer'
+import NotFound from './Components/Notfound'
 
 
 // function History() {
@@ -45,6 +46,7 @@ function App() {
                 : <Navigate to="/login" replace />
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </div>
