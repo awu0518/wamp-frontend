@@ -310,6 +310,12 @@ export default function Map() {
     setView('world');
   }, []);
 
+  const resetAllFilters = useCallback(() => {
+    setDateFrom('');
+    setDateTo('');
+    clearLocationFilters();
+  }, [clearLocationFilters]);
+
   const sortedCountryOptions = useMemo(
     () =>
       Object.entries(isoToName)
@@ -367,6 +373,7 @@ export default function Map() {
   // ── Total journal count for the legend (respects date filter) ───────────
   const totalJournals = Object.values(journalCounts.byCity).reduce((a, b) => a + b, 0);
   const dateFilterActive = hasJournalDateFilter(dateFrom, dateTo);
+  const anyFilterActive = dateFilterActive || locationFilterActive;
   const filterHint =
     [dateFilterActive && 'date', locationFilterActive && 'location'].filter(Boolean).join(' · ') ||
     null;
@@ -387,15 +394,27 @@ export default function Map() {
                 : 'Green states exist in the database. Click any green state to see its cities.'}
             </p>
           </div>
-          {view === 'us' && (
-            <button
-              type="button"
-              onClick={clearLocationFilters}
-              className="border-2 border-earth-600 text-earth-600 hover:bg-earth-600 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5 shrink-0"
-            >
-              ← World Map
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {anyFilterActive && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="border-2 border-coral-500 text-coral-600 hover:bg-coral-500 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5"
+                title="Clear visit-date range and country/state/city filters"
+              >
+                Reset all filters
+              </button>
+            )}
+            {view === 'us' && (
+              <button
+                type="button"
+                onClick={clearLocationFilters}
+                className="border-2 border-earth-600 text-earth-600 hover:bg-earth-600 hover:text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 text-sm flex items-center gap-1.5"
+              >
+                ← World Map
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Visit date filter — own row so it stays visible (works when logged in; sign-in hint otherwise) */}
