@@ -67,9 +67,11 @@ function Navbar() {
 
           {/* Mobile hamburger button */}
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setMenuOpen((open) => !open)}
             className="md:hidden text-white focus:outline-none"
             aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-menu"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {menuOpen ? (
@@ -83,7 +85,7 @@ function Navbar() {
 
         {/* Mobile menu dropdown */}
         {menuOpen && (
-          <div className="md:hidden px-6 pb-4 flex flex-col gap-3">
+          <div id="mobile-nav-menu" className="md:hidden px-6 pb-4 flex flex-col gap-3">
             {NAV_LINKS.map(({ to, label }) => (
               <NavLink
                 key={to}
