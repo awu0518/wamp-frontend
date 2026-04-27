@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getLeaderboard } from "../services/api";
+import { Link } from "react-router-dom";
 
 export default function LeaderBoard() {
   const [leaders, setLeaders] = useState([]);
@@ -117,15 +118,20 @@ export default function LeaderBoard() {
         <section className="max-w-6xl mx-auto px-6 pb-14">
           <div className="bg-white rounded-2xl shadow-md border border-[#e5d8c7] p-6">
             <h2 className="text-2xl font-bold text-[#295c3b] text-center mb-6 font-serif">
-              Popular destinations
+              Top 6 Popular Destinations
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {popularDestinations.slice(0, 12).map((d) => (
+              {popularDestinations.slice(0, 6).map((d) => (
                 <li
                   key={d.name}
                   className="flex justify-between items-center rounded-xl border border-[#e5d8c7] bg-[#faf8f5] px-4 py-3 text-[#295c3b]"
                 >
-                  <span className="font-medium truncate pr-2">{d.name || "—"}</span>
+                  <Link
+                    to={`/map?city=${encodeURIComponent(d.name)}`}
+                    className="font-medium truncate pr-2 hover:underline"
+                  >
+                    {d.name || "—"}
+                  </Link>
                   <span className="text-[#2f7db2] font-semibold shrink-0">
                     {d.count} visits
                   </span>

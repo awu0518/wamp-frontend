@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { geoEqualEarth, geoAlbersUsa, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { getCountries, getStates, searchCities, getJournals, getStoredToken } from '../../services/api';
@@ -22,6 +23,12 @@ const US_H = 600;
 
 export default function Map() {
   const [view, setView] = useState('world');
+
+  const location = useLocation();
+
+  const cityFromUrl = useMemo(() => {
+    return new URLSearchParams(location.search).get('city');
+  }, [location.search]);
 
   // ── TopoJSON features ──────────────────────────────────────────────────
   const [worldFeatures, setWorldFeatures] = useState(null);
@@ -183,6 +190,17 @@ export default function Map() {
       });
   }, []);
 
+  useEffect(() => {
+    if (!cityFromUrl) return;
+
+    setView('us');
+    setGeoFilterCountry('US');
+    loadStates();
+    loadUsGeo();
+    setSelectedCity(cityFromUrl);
+    setGeoFilterCities(new Set([cityFromUrl]));
+  }, [cityFromUrl]);
+  
   useEffect(() => {
     refreshJournalCounts();
   }, [refreshJournalCounts]);
@@ -670,10 +688,10 @@ export default function Map() {
         )}
 
         {/* ── Journal panel (appears when a city is clicked) ───────────── */}
-        {view === 'us' && selectedStates.length > 0 && selectedCity && (
+        {view === 'us' && selectedCity && (
           <JournalPanel
             city={selectedCity}
-            stateCode={cityStateCode[selectedCity] || selectedStates[0]?.code}
+            stateCode={cityStateCode[selectedCity] || selectedStates[0]?.code || ''}
             dateFrom={dateFrom}
             dateTo={dateTo}
             onClose={() => {
