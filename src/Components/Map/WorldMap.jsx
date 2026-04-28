@@ -8,6 +8,7 @@ export default function WorldMap({
   isoToName,
   journalCounts,
   heatmapCounts,
+  cityMarkers = [],
   hoveredId,
   onHover,
   onLeave,
@@ -30,6 +31,44 @@ export default function WorldMap({
     const vals = Object.values(heat);
     return vals.length ? Math.max(...vals) : 0;
   }, [heat]);
+
+  const clusteredMarkers = useMemo(() => {
+    if (!path || !cityMarkers.length) return [];
+    const projection = path.projection && path.projection();
+    if (!projection) return [];
+
+    const gridSize = 26;
+    const clusters = new Map();
+
+    cityMarkers.forEach((marker) => {
+      const p = projection([marker.lon, marker.lat]);
+      if (!p || !isFinite(p[0]) || !isFinite(p[1])) return;
+      const [x, y] = p;
+      if (x < 0 || x > W_W || y < 0 || y > W_H) return;
+      const cellX = Math.floor(x / gridSize);
+      const cellY = Math.floor(y / gridSize);
+      const key = `${cellX}|${cellY}`;
+      const existing = clusters.get(key);
+      if (existing) {
+        existing.points += 1;
+        existing.count += marker.count;
+        existing.x = (existing.x * (existing.points - 1) + x) / existing.points;
+        existing.y = (existing.y * (existing.points - 1) + y) / existing.points;
+        if (existing.samples.length < 3) existing.samples.push(marker.name);
+        return;
+      }
+      clusters.set(key, {
+        id: key,
+        x,
+        y,
+        points: 1,
+        count: marker.count,
+        samples: [marker.name],
+      });
+    });
+
+    return [...clusters.values()].sort((a, b) => b.count - a.count);
+  }, [cityMarkers, path]);
 
   const getFill = (geo) => {
     const alpha2 = NUMERIC_TO_ALPHA2[geo.id];
@@ -79,6 +118,37 @@ export default function WorldMap({
             onMouseLeave={() => { onLeave(); onHideTooltip(); }}
             onClick={() => onCountryClick(geo)}
           />
+        );
+      })}
+
+      {/* Clustered city markers from journal coordinates (if available) */}
+      {clusteredMarkers.map((cluster) => {
+        const markerScale = Math.min(Math.max(cluster.count, 1), 40);
+        const r = 4 + Math.log(markerScale + 1) * 2.2;
+        const sampleText = cluster.samples.join(', ');
+        const tooltip =
+          `${cluster.count} journal${cluster.count > 1 ? 's' : ''} · ` +
+          `${cluster.points} cit${cluster.points > 1 ? 'ies' : 'y'} · ${sampleText}`;
+        return (
+          <g
+            key={`cm-${cluster.id}`}
+            transform={`translate(${cluster.x},${cluster.y})`}
+            style={{ cursor: 'default' }}
+            onMouseEnter={(e) => onShowTooltip(tooltip, e)}
+            onMouseLeave={onHideTooltip}
+          >
+            <circle r={r + 1.2} fill="#FFFFFF" fillOpacity={0.9} />
+            <circle r={r} fill="#14506E" fillOpacity={0.82} />
+            <text
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={cluster.count > 99 ? 7 : 8}
+              fontWeight="700"
+              fill="#FFFFFF"
+            >
+              {cluster.count > 999 ? '999+' : cluster.count}
+            </text>
+          </g>
         );
       })}
 

@@ -266,6 +266,36 @@ export default function Map() {
     return { byState, byCountry };
   }, [rawJournals, dateFrom, dateTo]);
 
+  // World markers are shown only when journal entries expose coordinates.
+  const worldCityMarkers = useMemo(() => {
+    const byCity = new globalThis.Map();
+    filteredJournals.forEach((j) => {
+      const lat = Number(j.latitude ?? j.lat ?? j.location_latitude);
+      const lon = Number(j.longitude ?? j.lng ?? j.lon ?? j.location_longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+      const city = (j.location_name || '').trim();
+      if (!city) return;
+      const stateCode = (j.state_code || '').trim();
+      const isoCode = (j.iso_code || '').trim();
+      const key = `${city.toLowerCase()}|${stateCode}|${isoCode}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
+      const existing = byCity.get(key);
+      if (existing) {
+        existing.count += 1;
+        return;
+      }
+      const region = [stateCode, isoCode].filter(Boolean).join(', ');
+      byCity.set(key, {
+        id: key,
+        name: city,
+        region,
+        lat,
+        lon,
+        count: 1,
+      });
+    });
+    return [...byCity.values()];
+  }, [filteredJournals]);
+
   // ── Tooltip ────────────────────────────────────────────────────────────
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
 
@@ -620,6 +650,7 @@ export default function Map() {
               isoToName={isoToName}
               journalCounts={journalCounts.byCountry}
               heatmapCounts={heatmapCounts.byCountry}
+              cityMarkers={worldCityMarkers}
               hoveredId={hoveredId}
               onHover={setHoveredId}
               onLeave={() => setHoveredId(null)}
