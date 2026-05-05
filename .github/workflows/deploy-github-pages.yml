@@ -1,9 +1,19 @@
-# Publishes the Vite build to GitHub Pages on pushes to the default branch.
-# Repo settings → Pages → Source: "GitHub Actions" (one-time).
-# If you host on Vercel/Netlify/etc., delete this file or disable the workflow.
+# GitHub Pages only — builds and deploys this Vite app from GitHub Actions.
+#
+# One-time Pages setup (otherwise deploy-pages can return HTTP 404):
+#   Repo → Settings → Pages → Build and deployment → Source: GitHub Actions
+#
+# API URL at build time (same idea as `.env.local` locally):
+#   Repo → Settings → Secrets and variables → Actions → Variables
+#   Name: VITE_API_BASE_URL   Value: your backend origin, no trailing slash, e.g. https://your-api.example.com
+#   Vite embeds only vars prefixed with VITE_; they are visible in the published JS bundle (use HTTPS; avoid secrets).
+#   Leave unset to use fallbacks in `src/services/api.js`.
+#
+# Docs: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow
 name: Deploy to GitHub Pages
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, master]
 
@@ -34,6 +44,8 @@ jobs:
           npm run test:ci
 
       - name: Build for GitHub Pages
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run build -- --base=/${{ github.event.repository.name }}/
 
       - uses: actions/upload-pages-artifact@v3
