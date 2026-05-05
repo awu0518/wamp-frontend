@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Map from './Map';
+
+function renderMap() {
+  return render(
+    <MemoryRouter initialEntries={['/']}>
+      <Map />
+    </MemoryRouter>,
+  );
+}
 
 /** Minimal valid Topology for topojson-client `feature` (single polygon, id 840 = USA in mapConstants). */
 const minimalWorldTopo = {
@@ -101,7 +110,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('renders the location filter row with country, state, and city selects', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => {
       expect(screen.getByText('Filter by location')).toBeInTheDocument();
@@ -115,7 +124,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('lists countries from GET /countries in the country select', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -127,7 +136,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('switches to the US map when United States is chosen in the country filter', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -140,7 +149,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('enables state select after US is selected and lists states', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -157,7 +166,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('adds a state chip when a state is selected from the dropdown', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -181,7 +190,7 @@ describe('Map — location filter UI', () => {
   });
 
   it('shows Clear location after applying a country filter', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -229,7 +238,7 @@ describe('Map — Reset all filters button', () => {
   };
 
   it('is hidden when no date or location filter is active', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -239,7 +248,7 @@ describe('Map — Reset all filters button', () => {
   });
 
   it('appears when only a visit-date filter is active', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -254,7 +263,7 @@ describe('Map — Reset all filters button', () => {
   });
 
   it('appears when only a location filter is active', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 
@@ -269,7 +278,7 @@ describe('Map — Reset all filters button', () => {
   });
 
   it('clears both date and location filters when clicked', async () => {
-    render(<Map />);
+    renderMap();
 
     await waitFor(() => expect(screen.getByText('Filter by location')).toBeInTheDocument());
 

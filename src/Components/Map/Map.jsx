@@ -162,6 +162,10 @@ export default function Map() {
   const [dateTo, setDateTo] = useState('');
   const [selectedCity, setSelectedCity] = useState(null);
 
+  const [geoFilterCountry, setGeoFilterCountry] = useState('');
+  const [geoFilterStateNames, setGeoFilterStateNames] = useState(new Set());
+  const [geoFilterCities, setGeoFilterCities] = useState(new Set());
+
   const [, bumpAuthRead] = useState(0);
   const isLoggedIn = !!getStoredToken();
 
@@ -190,25 +194,22 @@ export default function Map() {
       });
   }, []);
 
+  /* eslint-disable react-hooks/exhaustive-deps -- run when URL city changes; loaders are guarded internally */
   useEffect(() => {
     if (!cityFromUrl) return;
 
-    setView('us');
-    setGeoFilterCountry('US');
     loadStates();
     loadUsGeo();
+    setView('us');
+    setGeoFilterCountry('US');
     setSelectedCity(cityFromUrl);
     setGeoFilterCities(new Set([cityFromUrl]));
   }, [cityFromUrl]);
+  /* eslint-enable react-hooks/exhaustive-deps */
   
   useEffect(() => {
     refreshJournalCounts();
   }, [refreshJournalCounts]);
-
-  // ── Location filter (country / states / cities) — narrows journals + syncs with map ──
-  const [geoFilterCountry, setGeoFilterCountry] = useState('');
-  const [geoFilterStateNames, setGeoFilterStateNames] = useState(new Set());
-  const [geoFilterCities, setGeoFilterCities] = useState(new Set());
 
   const locationFilterActive = hasLocationFilter(
     geoFilterCountry,
